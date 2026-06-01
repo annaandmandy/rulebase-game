@@ -49,12 +49,12 @@ export function RuleNotice() {
           住客安全須知
         </div>
         <ol className="flex flex-col gap-2.5 list-none">
-          {rules.map((rule) => {
+          {rules.map((rule, i) => {
             const isSpecial = rule.number >= 9;
             const isNew = rule.number >= 10;
             return (
               <li
-                key={rule.number}
+                key={`${rule.number}-${i}`}
                 className={`flex gap-2 ${
                   isSpecial ? "border-t border-amber-200/20 pt-2.5" : ""
                 } ${isNew ? "text-amber-300/70" : ""}`}
