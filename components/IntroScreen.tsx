@@ -4,7 +4,11 @@ import { useGameStore } from "@/lib/gameState";
 import { motion } from "framer-motion";
 
 export function IntroScreen() {
-  const { startGame } = useGameStore();
+  const { startGame, selectedScenario, goToScenarioSelect } = useGameStore();
+
+  const name = selectedScenario?.name ?? "山霧旅館";
+  const nameEn = selectedScenario?.nameEn;
+  const tagline = selectedScenario?.tagline ?? "深夜 · 山中 · 霧";
 
   return (
     <motion.div
@@ -20,7 +24,7 @@ export function IntroScreen() {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5 }}
         >
-          深夜 · 山中 · 霧
+          {tagline}
         </motion.div>
         <motion.h1
           className="text-4xl text-amber-100/60 font-light tracking-widest"
@@ -28,30 +32,30 @@ export function IntroScreen() {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.8 }}
         >
-          山霧旅館
+          {name}
         </motion.h1>
-        <motion.div
-          className="text-xs text-neutral-700 tracking-wider"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.1 }}
-        >
-          The Mist Hotel
-        </motion.div>
+        {nameEn && (
+          <motion.div
+            className="text-xs text-neutral-700 tracking-wider"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1.1 }}
+          >
+            {nameEn}
+          </motion.div>
+        )}
       </div>
 
-      <motion.p
-        className="text-sm text-neutral-600 leading-relaxed"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 1.5 }}
-      >
-        這間旅館有某種規律。
-        <br />
-        但你不知道規則到底是在保護你，
-        <br />
-        還是在引導你走向某個地方。
-      </motion.p>
+      {selectedScenario?.description && (
+        <motion.p
+          className="text-sm text-neutral-600 leading-relaxed whitespace-pre-line"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.5 }}
+        >
+          {selectedScenario.description}
+        </motion.p>
+      )}
 
       <motion.button
         onClick={startGame}
@@ -61,17 +65,18 @@ export function IntroScreen() {
         transition={{ delay: 2 }}
         whileHover={{ letterSpacing: "0.15em" }}
       >
-        入住
+        開始
       </motion.button>
 
-      <motion.div
-        className="text-xs text-neutral-800"
+      <motion.button
+        onClick={goToScenarioSelect}
+        className="text-xs text-neutral-800 hover:text-neutral-600 transition-colors"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 2.5 }}
+        transition={{ delay: 2.3 }}
       >
-        遊戲約需 20-30 分鐘 · 建議在安靜的環境中遊玩
-      </motion.div>
+        ← 返回劇本選擇
+      </motion.button>
     </motion.div>
   );
 }

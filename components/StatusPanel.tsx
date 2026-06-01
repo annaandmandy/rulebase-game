@@ -7,7 +7,7 @@ import { CorruptedText } from "./CorruptedText";
 export function StatusPanel() {
   const { player, world, formatTime } = useGameStore();
   const timeDisplay = formatTime();
-  const corruptLevel = Math.max(0, 10 - Math.floor(world.hotelRealityStability / 10));
+  const corruptLevel = Math.max(0, 10 - Math.floor((world.hotelRealityStability as number) / 10));
   const locationName = getLocationName(player.currentLocation, world);
 
   const sanityColor =
@@ -18,9 +18,9 @@ export function StatusPanel() {
       : "text-red-500";
 
   const stabilityColor =
-    world.hotelRealityStability > 60
+    (world.hotelRealityStability as number) > 60
       ? "text-slate-300"
-      : world.hotelRealityStability > 30
+      : (world.hotelRealityStability as number) > 30
       ? "text-yellow-500"
       : "text-red-500";
 
@@ -65,18 +65,18 @@ export function StatusPanel() {
       <div className="border-b border-neutral-800 pb-3">
         <div className="text-xs text-neutral-600 uppercase tracking-widest mb-1">旅館穩定度</div>
         <div className={`text-lg font-mono ${stabilityColor}`}>
-          {world.hotelRealityStability}
+          {(world.hotelRealityStability as number)}
         </div>
         <div className="mt-1 h-1 bg-neutral-800 rounded">
           <div
             className={`h-1 rounded transition-all duration-700 ${
-              world.hotelRealityStability > 60
+              (world.hotelRealityStability as number) > 60
                 ? "bg-slate-500"
-                : world.hotelRealityStability > 30
+                : (world.hotelRealityStability as number) > 30
                 ? "bg-yellow-700"
                 : "bg-red-800"
             }`}
-            style={{ width: `${world.hotelRealityStability}%` }}
+            style={{ width: `${(world.hotelRealityStability as number)}%` }}
           />
         </div>
       </div>

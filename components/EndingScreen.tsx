@@ -4,7 +4,7 @@ import { useGameStore } from "@/lib/gameState";
 import { motion } from "framer-motion";
 
 export function EndingScreen() {
-  const { activeEnding, resetToIntro } = useGameStore();
+  const { activeEnding, goToScenarioSelect } = useGameStore();
 
   if (!activeEnding) return null;
 
@@ -26,10 +26,10 @@ export function EndingScreen() {
 
       <div className="flex gap-3 pt-4">
         <button
-          onClick={resetToIntro}
+          onClick={goToScenarioSelect}
           className="px-5 py-2 text-xs text-neutral-500 border border-neutral-800 hover:border-neutral-600 hover:text-neutral-300 transition-colors"
         >
-          重新入住
+          返回劇本選擇
         </button>
       </div>
 

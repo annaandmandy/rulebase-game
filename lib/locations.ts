@@ -1,13 +1,9 @@
-import { LocationId, LocationAction, PlayerState, WorldState } from "@/types/game";
+import { LocationAction, PlayerState, WorldState } from "@/types/game";
+import { LocationData } from "@/types/scenario";
 
-export type LocationData = {
-  id: LocationId;
-  name: string;
-  mutatedName?: string;
-  description: (player: PlayerState, world: WorldState) => string;
-  adjacentLocations: LocationId[];
-  actions: LocationAction[];
-};
+export type { LocationData };
+
+type LocationId = string;
 
 export const LOCATIONS: Record<LocationId, LocationData> = {
   lobby: {

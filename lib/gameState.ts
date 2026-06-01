@@ -1,13 +1,18 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { PlayerState, WorldState, GameEvent, Choice, Effect, LocationId, GamePhase } from "@/types/game";
-import { GameEnding } from "@/types/game";
+import { PlayerState, WorldState, GameEvent, Choice, Effect, LocationId, GamePhase, GameEnding } from "@/types/game";
+import { ScenarioPack } from "@/types/scenario";
 import { getTriggeredEvent } from "./events";
-import { checkEnding } from "./endings";
-import { CHECKIN_EVENT } from "./checkinEvent";
-import { LOCATIONS } from "./locations";
+import { getScenarioById } from "./scenarioRegistry";
+import { DialogueMemory } from "@/types/dialogue";
+import { Dialogue, DialogueChoice } from "@/types/dialogue";
 
 export type GameStore = {
+  // Scenario
+  selectedScenario: ScenarioPack | null;
+  scenarioId: string | null;
+
+  // Game state
   player: PlayerState;
   world: WorldState;
   phase: GamePhase;
@@ -17,46 +22,21 @@ export type GameStore = {
   narrativeText: string;
   forcedEndingId: string | null;
 
-  resetToIntro: () => void;
+  // Dialogue state
+  activeDialogue: Dialogue | null;
+  currentDialogueSceneId: string | null;
+  dialogueMemory: DialogueMemory;
+
+  // Actions
+  goToScenarioSelect: () => void;
+  selectScenario: (scenario: ScenarioPack) => void;
   startGame: () => void;
   navigateTo: (location: LocationId) => void;
   applyChoice: (choice: Choice) => void;
   checkForEvents: () => void;
+  startDialogue: (dialogue: Dialogue) => void;
+  selectDialogueOption: (choice: DialogueChoice) => void;
   formatTime: (minutes?: number) => string;
-};
-
-const INITIAL_PLAYER: PlayerState = {
-  currentLocation: "front_desk",
-  timeMinutes: 21 * 60 + 43,
-  sanity: 100,
-  suspicion: 0,
-  hasRoomKey: false,
-  openedWindow: false,
-  answeredKnock: false,
-  enteredBasement: false,
-  ateEggs: false,
-  sawDuplicateGuest: false,
-  hasReadExtraRule: false,
-  foundSheets: [],
-  phoneAnswered: false,
-  heardName: false,
-  wardrobeOpened: false,
-  foundPreviousNote: false,
-  talkedToChild: false,
-  eggVerificationDone: false,
-  discoveredClues: [],
-  endingsUnlocked: [],
-  logs: [{ time: "21:43", text: "你抵達山霧旅館。" }],
-};
-
-const INITIAL_WORLD: WorldState = {
-  fogDensity: 80,
-  hotelRealityStability: 100,
-  elevatorState: "normal",
-  staffMode: "normal",
-  room304State: "safe",
-  ruleNoticeVersion: 1,
-  anomalyAttention: 0,
 };
 
 function formatMinutes(timeMinutes: number): string {
@@ -106,30 +86,24 @@ function applyEffect(
       }
       break;
     case "world":
-      if (effect.key === "hotelRealityStability") {
-        w.hotelRealityStability = Math.max(
-          0,
-          Math.min(100, w.hotelRealityStability + (effect.value as number))
-        );
-      } else if (effect.key === "anomalyAttention") {
-        w.anomalyAttention = Math.max(0, w.anomalyAttention + (effect.value as number));
-      } else if (effect.key === "ruleNoticeVersion") {
-        w.ruleNoticeVersion = effect.value as number;
-      } else if (effect.key === "elevatorState") {
-        w.elevatorState = effect.value as WorldState["elevatorState"];
-      } else if (effect.key === "staffMode") {
-        w.staffMode = effect.value as WorldState["staffMode"];
-      } else if (effect.key === "room304State") {
-        w.room304State = effect.value as WorldState["room304State"];
+      if (effect.key) {
+        const v = effect.value as number;
+        if (effect.key === "hotelRealityStability") {
+          w.hotelRealityStability = Math.max(0, Math.min(100, (w.hotelRealityStability as number) + v));
+        } else if (effect.key === "anomalyAttention") {
+          w.anomalyAttention = Math.max(0, (w.anomalyAttention as number) + v);
+        } else {
+          (w as Record<string, unknown>)[effect.key] = effect.value;
+        }
       }
       break;
     case "ending":
       forcedEnding = effect.value as string;
       break;
     case "anomaly":
-      w.anomalyAttention = Math.max(0, w.anomalyAttention + (effect.value as number));
-      if (w.anomalyAttention > 3) {
-        w.hotelRealityStability = Math.max(0, w.hotelRealityStability - 5);
+      w.anomalyAttention = Math.max(0, (w.anomalyAttention as number) + (effect.value as number));
+      if ((w.anomalyAttention as number) > 3) {
+        w.hotelRealityStability = Math.max(0, (w.hotelRealityStability as number) - 5);
       }
       break;
   }
@@ -141,75 +115,133 @@ function updateWorldBasedOnTime(player: PlayerState, world: WorldState): WorldSt
   const w = { ...world };
   const hour = Math.floor((player.timeMinutes % (24 * 60)) / 60);
 
-  if ((hour >= 0 && hour < 6) && w.elevatorState === "normal" && w.anomalyAttention >= 2) {
+  if ((hour >= 0 && hour < 6) && w.elevatorState === "normal" && (w.anomalyAttention as number) >= 2) {
     w.elevatorState = "basement_visible";
   }
-
-  if (player.suspicion > 40 && w.staffMode === "normal") {
-    w.staffMode = "watching";
-  }
-  if (player.suspicion > 70 && w.staffMode === "watching") {
-    w.staffMode = "false_helpful";
-  }
-
-  if (w.anomalyAttention >= 4 && w.ruleNoticeVersion < 2) {
-    w.ruleNoticeVersion = 2;
-  }
-
-  if (w.anomalyAttention >= 6 && w.room304State === "safe") {
-    w.room304State = "occupied_by_self";
-  }
+  if (player.suspicion > 40 && w.staffMode === "normal") w.staffMode = "watching";
+  if (player.suspicion > 70 && w.staffMode === "watching") w.staffMode = "false_helpful";
+  if ((w.anomalyAttention as number) >= 4 && (w.ruleNoticeVersion as number) < 2) w.ruleNoticeVersion = 2;
+  if ((w.anomalyAttention as number) >= 6 && w.room304State === "safe") w.room304State = "occupied_by_self";
 
   return w;
 }
 
+const BLANK_PLAYER: PlayerState = {
+  currentLocation: "lobby",
+  timeMinutes: 0,
+  sanity: 100,
+  suspicion: 0,
+  hasRoomKey: false,
+  openedWindow: false,
+  answeredKnock: false,
+  enteredBasement: false,
+  ateEggs: false,
+  sawDuplicateGuest: false,
+  hasReadExtraRule: false,
+  foundSheets: [],
+  phoneAnswered: false,
+  heardName: false,
+  wardrobeOpened: false,
+  foundPreviousNote: false,
+  talkedToChild: false,
+  eggVerificationDone: false,
+  knewTooMuch: false,
+  discoveredClues: [],
+  endingsUnlocked: [],
+  logs: [],
+};
+
+const BLANK_WORLD: WorldState = {
+  fogDensity: 80,
+  hotelRealityStability: 100,
+  elevatorState: "normal",
+  staffMode: "normal",
+  room304State: "safe",
+  ruleNoticeVersion: 1,
+  anomalyAttention: 0,
+};
+
 export const useGameStore = create<GameStore>()(
   persist(
     (set, get) => ({
-      player: INITIAL_PLAYER,
-      world: INITIAL_WORLD,
-      phase: "intro" as GamePhase,
+      selectedScenario: null,
+      scenarioId: null,
+      player: BLANK_PLAYER,
+      world: BLANK_WORLD,
+      phase: "scenario_select" as GamePhase,
       currentEvent: null,
       activeEnding: null,
       triggeredEventIds: [],
       narrativeText: "",
       forcedEndingId: null,
+      activeDialogue: null,
+      currentDialogueSceneId: null,
+      dialogueMemory: {},
 
       formatTime: (minutes?: number) => {
         const t = minutes !== undefined ? minutes : get().player.timeMinutes;
         return formatMinutes(t);
       },
 
-      resetToIntro: () => {
+      goToScenarioSelect: () => {
         set({
-          player: INITIAL_PLAYER,
-          world: INITIAL_WORLD,
+          phase: "scenario_select",
+          currentEvent: null,
+          activeEnding: null,
+          activeDialogue: null,
+          currentDialogueSceneId: null,
+          dialogueMemory: {},
+        });
+      },
+
+      selectScenario: (scenario: ScenarioPack) => {
+        set({
+          selectedScenario: scenario,
+          scenarioId: scenario.id,
           phase: "intro",
+          player: BLANK_PLAYER,
+          world: BLANK_WORLD,
           currentEvent: null,
           activeEnding: null,
           triggeredEventIds: [],
           narrativeText: "",
           forcedEndingId: null,
+          activeDialogue: null,
+          currentDialogueSceneId: null,
+          dialogueMemory: {},
         });
       },
 
       startGame: () => {
+        const { selectedScenario } = get();
+        if (!selectedScenario) return;
+
+        const player = {
+          ...selectedScenario.initialPlayer,
+          logs: [{ time: formatMinutes(selectedScenario.initialPlayer.timeMinutes as number), text: `你抵達${selectedScenario.name}。` }],
+        } as PlayerState;
+
         set({
-          player: INITIAL_PLAYER,
-          world: INITIAL_WORLD,
+          player,
+          world: { ...selectedScenario.initialWorld },
           phase: "playing",
-          currentEvent: CHECKIN_EVENT,
+          currentEvent: selectedScenario.checkinEvent,
           activeEnding: null,
           triggeredEventIds: [],
           narrativeText: "",
           forcedEndingId: null,
+          activeDialogue: null,
+          currentDialogueSceneId: null,
+          dialogueMemory: {},
         });
       },
 
       navigateTo: (location: LocationId) => {
-        const { player, world, checkForEvents } = get();
+        const { player, world, selectedScenario, checkForEvents } = get();
+        if (!selectedScenario) return;
+
         const timeCost = 10 + Math.floor(Math.random() * 10);
-        const locName = LOCATIONS[location]?.name ?? location;
+        const locName = selectedScenario.locations[location]?.name ?? location;
         const newTimeMinutes = player.timeMinutes + timeCost;
         const logEntry = makeLog(newTimeMinutes, `你前往${locName}。`);
         const newPlayer: PlayerState = {
@@ -220,12 +252,13 @@ export const useGameStore = create<GameStore>()(
         };
         const newWorld = updateWorldBasedOnTime(newPlayer, world);
 
-        set({ player: newPlayer, world: newWorld, currentEvent: null, narrativeText: "" });
+        set({ player: newPlayer, world: newWorld, currentEvent: null, narrativeText: "", activeDialogue: null });
         checkForEvents();
       },
 
       applyChoice: (choice: Choice) => {
-        const { player, world, currentEvent, triggeredEventIds } = get();
+        const { player, world, currentEvent, triggeredEventIds, selectedScenario } = get();
+        if (!selectedScenario) return;
 
         let p = { ...player };
         let w = { ...world };
@@ -235,18 +268,12 @@ export const useGameStore = create<GameStore>()(
           const result = applyEffect(p, w, effect);
           p = result.player;
           w = result.world;
-          if (result.forcedEnding) {
-            forcedEndingId = result.forcedEnding;
-          }
+          if (result.forcedEnding) forcedEndingId = result.forcedEnding;
         }
 
-        if (choice.nextLocation) {
-          p.currentLocation = choice.nextLocation;
-        }
-
+        if (choice.nextLocation) p.currentLocation = choice.nextLocation;
         w = updateWorldBasedOnTime(p, w);
 
-        // Add log entry directly to p so it survives the set() call
         const logEntry = makeLog(p.timeMinutes, choice.resultText.slice(0, 80) + (choice.resultText.length > 80 ? "…" : ""));
         p.logs = [logEntry, ...p.logs].slice(0, 30);
 
@@ -254,15 +281,13 @@ export const useGameStore = create<GameStore>()(
           ? [...triggeredEventIds, currentEvent.id]
           : triggeredEventIds;
 
-        // Check for ending
         const ending = forcedEndingId
-          ? checkEnding(p, w, forcedEndingId)
-          : checkEnding(p, w);
+          ? selectedScenario.checkEnding(p, w, forcedEndingId)
+          : selectedScenario.checkEnding(p, w);
 
         if (ending) {
           set({
-            player: p,
-            world: w,
+            player: p, world: w,
             currentEvent: null,
             triggeredEventIds: newTriggeredIds,
             narrativeText: choice.resultText,
@@ -273,12 +298,10 @@ export const useGameStore = create<GameStore>()(
           return;
         }
 
-        // Check for new events after the choice
-        const nextEvent = getTriggeredEvent(p, w, new Set(newTriggeredIds));
+        const nextEvent = getTriggeredEvent(p, w, new Set(newTriggeredIds), selectedScenario.events);
 
         set({
-          player: p,
-          world: w,
+          player: p, world: w,
           currentEvent: nextEvent,
           triggeredEventIds: newTriggeredIds,
           narrativeText: choice.resultText,
@@ -287,17 +310,71 @@ export const useGameStore = create<GameStore>()(
       },
 
       checkForEvents: () => {
-        const { player, world, triggeredEventIds } = get();
-        const event = getTriggeredEvent(player, world, new Set(triggeredEventIds));
-        if (event) {
-          set({ currentEvent: event });
+        const { player, world, triggeredEventIds, selectedScenario } = get();
+        if (!selectedScenario) return;
+        const event = getTriggeredEvent(player, world, new Set(triggeredEventIds), selectedScenario.events);
+        if (event) set({ currentEvent: event });
+      },
+
+      startDialogue: (dialogue: Dialogue) => {
+        set({
+          activeDialogue: dialogue,
+          currentDialogueSceneId: dialogue.startScene,
+          dialogueMemory: {},
+        });
+      },
+
+      selectDialogueOption: (choice: DialogueChoice) => {
+        const { player, world, dialogueMemory, activeDialogue, selectedScenario } = get();
+        if (!selectedScenario) return;
+
+        let p = { ...player };
+        let w = { ...world };
+        let forcedEndingId: string | undefined;
+
+        if (choice.effects) {
+          for (const effect of choice.effects) {
+            const result = applyEffect(p, w, effect);
+            p = result.player;
+            w = result.world;
+            if (result.forcedEnding) forcedEndingId = result.forcedEnding;
+          }
+        }
+
+        const newMemory: DialogueMemory = choice.setMemory
+          ? { ...dialogueMemory, ...(choice.setMemory as DialogueMemory) }
+          : dialogueMemory;
+
+        if (choice.next === null) {
+          // End dialogue
+          const logEntry = makeLog(p.timeMinutes, `結束了和${activeDialogue?.npcName ?? "NPC"}的對話。`);
+          p.logs = [logEntry, ...p.logs].slice(0, 30);
+          w = updateWorldBasedOnTime(p, w);
+
+          // Check for ending triggered by dialogue
+          const ending = forcedEndingId
+            ? selectedScenario.checkEnding(p, w, forcedEndingId)
+            : null;
+
+          if (ending) {
+            set({ player: p, world: w, activeDialogue: null, currentDialogueSceneId: null, dialogueMemory: {}, activeEnding: ending, phase: "ending" });
+          } else {
+            set({ player: p, world: w, activeDialogue: null, currentDialogueSceneId: null, dialogueMemory: newMemory });
+          }
+        } else {
+          set({
+            player: p, world: w,
+            currentDialogueSceneId: choice.next,
+            dialogueMemory: newMemory,
+          });
         }
       },
     }),
     {
-      name: "shanwu-game-save",
+      name: "rulebase-game-save-v2",
       skipHydration: true,
       partialize: (state) => ({
+        scenarioId: state.scenarioId,
         player: state.player,
         world: state.world,
         phase: state.phase,
@@ -305,6 +382,22 @@ export const useGameStore = create<GameStore>()(
         narrativeText: state.narrativeText,
         forcedEndingId: state.forcedEndingId,
       }),
+      onRehydrateStorage: () => (state) => {
+        if (!state) return;
+        // Restore selectedScenario from saved scenarioId
+        if (state.scenarioId) {
+          const scenario = getScenarioById(state.scenarioId);
+          if (scenario) {
+            state.selectedScenario = scenario;
+          } else {
+            state.phase = "scenario_select";
+          }
+        }
+        // Restore checkin event if game started but not completed
+        if (state.phase === "playing" && state.selectedScenario && !state.triggeredEventIds.includes("checkin")) {
+          state.currentEvent = state.selectedScenario.checkinEvent;
+        }
+      },
     }
   )
 );

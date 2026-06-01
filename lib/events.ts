@@ -738,9 +738,10 @@ export const GAME_EVENTS: GameEvent[] = [
 export function getTriggeredEvent(
   player: PlayerState,
   world: WorldState,
-  triggeredIds: Set<string>
+  triggeredIds: Set<string>,
+  events: GameEvent[] = GAME_EVENTS
 ): GameEvent | null {
-  for (const event of GAME_EVENTS) {
+  for (const event of events) {
     if (event.once && triggeredIds.has(event.id)) continue;
     if (event.trigger(player, world)) {
       return event;

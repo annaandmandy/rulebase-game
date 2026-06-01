@@ -20,12 +20,13 @@ const SOURCE_COLORS: Record<string, string> = {
 };
 
 export function RuleNotice() {
-  const { player, world } = useGameStore();
-  const rules = getRules(player, world);
+  const { player, world, selectedScenario } = useGameStore();
+  const rules = selectedScenario?.getRules(player, world) ?? getRules(player, world);
   const corruptLevel = Math.max(0, 10 - Math.floor(world.hotelRealityStability / 10));
   const isCorrupted = world.hotelRealityStability < 50;
+  const sheetSource = selectedScenario?.ruleSheets ?? RULE_SHEETS;
   const foundSheets = player.foundSheets
-    .map((id) => RULE_SHEETS[id])
+    .map((id) => sheetSource[id])
     .filter(Boolean);
 
   return (

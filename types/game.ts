@@ -1,13 +1,5 @@
-export type LocationId =
-  | "lobby"
-  | "elevator"
-  | "corridor"
-  | "room304"
-  | "restaurant"
-  | "stairwell"
-  | "basement_entrance"
-  | "balcony"
-  | "front_desk";
+// LocationId is a string so generated scenarios can define custom locations
+export type LocationId = string;
 
 export type GameLog = {
   time: string;
@@ -26,18 +18,19 @@ export type PlayerState = {
   ateEggs: boolean;
   sawDuplicateGuest: boolean;
   hasReadExtraRule: boolean;
-  // found documents
   foundSheets: string[];
-  // new event flags
   phoneAnswered: boolean;
   heardName: boolean;
   wardrobeOpened: boolean;
   foundPreviousNote: boolean;
   talkedToChild: boolean;
   eggVerificationDone: boolean;
+  knewTooMuch: boolean;
   discoveredClues: string[];
   endingsUnlocked: string[];
   logs: GameLog[];
+  // Extra flags for generated scenarios (keyed by name)
+  [key: string]: unknown;
 };
 
 export type WorldState = {
@@ -48,6 +41,8 @@ export type WorldState = {
   room304State: "safe" | "duplicated" | "occupied_by_self" | "missing";
   ruleNoticeVersion: number;
   anomalyAttention: number;
+  // Extra world state for generated scenarios
+  [key: string]: unknown;
 };
 
 export type Effect = {
@@ -84,12 +79,10 @@ export type GameEvent = {
   once?: boolean;
 };
 
-export type GamePhase = "intro" | "playing" | "ending";
-
-export type EndingId = "A" | "B" | "C" | "D" | "hidden";
+export type GamePhase = "scenario_select" | "intro" | "playing" | "ending";
 
 export type GameEnding = {
-  id: EndingId;
+  id: string;
   title: string;
   text: string;
   condition: (player: PlayerState, world: WorldState) => boolean;
@@ -101,4 +94,5 @@ export type LocationAction = {
   condition?: (player: PlayerState, world: WorldState) => boolean;
   resultText: string | ((player: PlayerState, world: WorldState) => string);
   effects: Effect[];
+  dialogueId?: string;
 };
