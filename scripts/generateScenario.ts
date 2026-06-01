@@ -638,7 +638,8 @@ async function runEventEngineer(
   client: Anthropic,
   concept: ConceptOutput,
   rules: RulesOutput,
-  contract: DesignContract
+  contract: DesignContract,
+  scenarioSlug: string
 ): Promise<EventsOutput> {
   const locations = concept.locations.map((l) => l.id).join(", ");
   // Split rule events into thirds to stay under token limit
@@ -653,32 +654,32 @@ async function runEventEngineer(
   const strictPrompt = `每個事件嚴格控制：description ≤ 60字，resultText ≤ 45字，只輸出必要欄位。\n${EFFECTS_REF}`;
 
   // Save sub-checkpoints so retry doesn't re-run completed parts
-  let eventsA = (await loadCheckpoint(finalSlug, "events_3a")) as EventsOutput | null;
+  let eventsA = (await loadCheckpoint(scenarioSlug, "events_3a")) as EventsOutput | null;
   if (!eventsA) {
     const r = await callAgent(client, "Agent 3a 事件工程師（開場+前段）", EVENT_SYSTEM_PROMPT,
       `設計 ${ruleMapA.length + 1} 個事件。場景：${concept.name}，地點：${locations}\n\n1. 開場事件（once: true）：玩家進入場景，收到規則說明\n2. 合約規定事件（ID 必須完全相同）：\n${ruleMapA.map((r) => `   - ${r.mustTriggerEventId}`).join("\n")}\n\n${strictPrompt}\n\n輸出 JSON（\`\`\`json）：{ "events": [...] }`,
       baseContext, 8000);
     eventsA = extractJSON<EventsOutput>(r);
-    await saveCheckpoint(finalSlug, "events_3a", eventsA);
+    await saveCheckpoint(scenarioSlug, "events_3a", eventsA);
   }
 
-  let eventsB = (await loadCheckpoint(finalSlug, "events_3b")) as EventsOutput | null;
+  let eventsB = (await loadCheckpoint(scenarioSlug, "events_3b")) as EventsOutput | null;
   if (!eventsB) {
     const r = await callAgent(client, "Agent 3b 事件工程師（中段）", EVENT_SYSTEM_PROMPT,
       `設計 ${ruleMapB.length} 個事件。場景：${concept.name}，地點：${locations}\n\n合約規定事件（ID 必須完全相同）：\n${ruleMapB.map((r) => `   - ${r.mustTriggerEventId}`).join("\n")}\n\n${strictPrompt}\n\n輸出 JSON（\`\`\`json）：{ "events": [...] }`,
       baseContext, 8000);
     eventsB = extractJSON<EventsOutput>(r);
-    await saveCheckpoint(finalSlug, "events_3b", eventsB);
+    await saveCheckpoint(scenarioSlug, "events_3b", eventsB);
   }
 
-  let eventsC = (await loadCheckpoint(finalSlug, "events_3c")) as EventsOutput | null;
+  let eventsC = (await loadCheckpoint(scenarioSlug, "events_3c")) as EventsOutput | null;
   if (!eventsC) {
     const contradictionStr = contract.contradictionEvents.map((c) => `- ${c.eventId}：${c.choiceConsequence}`).join("\n");
     const r = await callAgent(client, "Agent 3c 事件工程師（矛盾+清晨）", EVENT_SYSTEM_PROMPT,
       `設計 ${ruleMapC.length + contract.contradictionEvents.length + 1} 個事件。場景：${concept.name}，地點：${locations}\n\n1. 合約規定事件：\n${ruleMapC.map((r) => `   - ${r.mustTriggerEventId}`).join("\n")}\n2. 矛盾規則事件：\n${contradictionStr}\n3. 清晨/離開條件（once: true）：\n${contract.endingPaths.map((e) => `   - 結局 ${e.endingId} 需要：${e.requiredEvents.join(", ")}`).join("\n")}\n\n${strictPrompt}\n\n輸出 JSON（\`\`\`json）：{ "events": [...] }`,
       baseContext, 8000);
     eventsC = extractJSON<EventsOutput>(r);
-    await saveCheckpoint(finalSlug, "events_3c", eventsC);
+    await saveCheckpoint(scenarioSlug, "events_3c", eventsC);
   }
 
   return { events: [...eventsA.events, ...eventsB.events, ...eventsC.events] };
@@ -1152,7 +1153,7 @@ async function main() {
   if (!events || !dialogues) {
     log("Agent 3+4", "事件工程師 + 對話作家 並行執行（依設計合約）...");
     const [eventsResult, dialoguesResult] = await Promise.all([
-      events ?? runEventEngineer(client, concept, rules, contract),
+      events ?? runEventEngineer(client, concept, rules, contract, finalSlug),
       dialogues ?? runDialogueWriter(client, concept, rules, contract),
     ]);
     events = eventsResult;
