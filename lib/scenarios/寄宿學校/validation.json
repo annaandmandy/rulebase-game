@@ -1,0 +1,19 @@
+{
+  "valid": true,
+  "issues": [],
+  "warnings": [
+    "eventIds 含重複項：event_roll_call、event_third_bell、event_infirmary_sign"
+  ],
+  "suggestions": [
+    "建議去除 eventIds 重複，避免觸發邏輯混淆"
+  ],
+  "rulesCoverage": {
+    "1": true,
+    "2": true,
+    "3": true,
+    "4": true,
+    "5": true,
+    "6": true,
+    "7": true
+  }
+}

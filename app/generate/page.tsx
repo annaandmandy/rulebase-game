@@ -2,54 +2,32 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
+import { useGameStore } from "@/lib/gameState";
 
-type Status = "idle" | "running" | "done" | "error";
-
-type LogEntry = {
-  id: number;
-  text: string;
-  isHeader: boolean;
-};
-
-type DonePayload = {
-  success: boolean;
-  slug: string;
-  theme: string;
-};
+type AddStatus = "idle" | "adding" | "added" | "error";
 
 export default function GeneratePage() {
+  const { generationJob, setGenerationJob, appendGenerationLog } = useGameStore();
+
   const [theme, setTheme] = useState("");
   const [keywords, setKeywords] = useState("");
   const [apiKey, setApiKey] = useState("");
-  const [status, setStatus] = useState<Status>("idle");
-  const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [result, setResult] = useState<DonePayload | null>(null);
-  const [addStatus, setAddStatus] = useState<"idle" | "adding" | "added" | "error">("idle");
+  const [addStatus, setAddStatus] = useState<AddStatus>("idle");
   const [addMessage, setAddMessage] = useState("");
   const logEndRef = useRef<HTMLDivElement>(null);
-  const logId = useRef(0);
+
+  const isRunning = generationJob?.running === true;
+  const isDone = generationJob?.done === true;
 
   useEffect(() => {
     logEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [logs]);
-
-  function addLog(text: string) {
-    const lines = text.split("\n").filter((l) => l.trim().length > 0);
-    setLogs((prev) => [
-      ...prev,
-      ...lines.map((line) => ({
-        id: logId.current++,
-        text: line,
-        isHeader: line.startsWith("[Agent") || line.startsWith("✅") || line.startsWith("❌") || line.startsWith("🎭"),
-      })),
-    ]);
-  }
+  }, [generationJob?.logs.length]);
 
   async function handleGenerate() {
     if (!theme.trim() || !apiKey.trim()) return;
-    setStatus("running");
-    setLogs([]);
-    setResult(null);
+
+    const slug = theme.trim().replace(/\s+/g, "_").replace(/[^\w一-鿿]/g, "");
+    setGenerationJob({ theme: theme.trim(), slug, running: true, done: false, logs: [] });
     setAddStatus("idle");
 
     try {
@@ -60,8 +38,9 @@ export default function GeneratePage() {
       });
 
       if (!res.ok || !res.body) {
-        setStatus("error");
-        addLog("❌ 連線失敗");
+        setGenerationJob((prev) =>
+          prev ? { ...prev, running: false, done: true, success: false } : null
+        );
         return;
       }
 
@@ -73,7 +52,6 @@ export default function GeneratePage() {
         const { done, value } = await reader.read();
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
-
         const events = buffer.split("\n\n");
         buffer = events.pop() ?? "";
 
@@ -81,32 +59,44 @@ export default function GeneratePage() {
           if (!event.startsWith("data: ")) continue;
           try {
             const data = JSON.parse(event.slice(6));
-            if (data.type === "log") addLog(data.message);
+            if (data.type === "log") appendGenerationLog(data.message);
             if (data.type === "done") {
-              setResult(data as DonePayload);
-              setStatus(data.success ? "done" : "error");
+              setGenerationJob((prev) =>
+                prev ? { ...prev, running: false, done: true, success: data.success } : null
+              );
             }
             if (data.type === "error") {
-              addLog(`❌ ${data.message}`);
-              setStatus("error");
+              appendGenerationLog(`❌ ${data.message}`);
+              setGenerationJob((prev) =>
+                prev ? { ...prev, running: false, done: true, success: false } : null
+              );
             }
-          } catch { /* ignore parse errors */ }
+          } catch { /* ignore */ }
         }
       }
     } catch (err) {
-      addLog(`❌ ${String(err)}`);
-      setStatus("error");
+      appendGenerationLog(`❌ ${String(err)}`);
+      setGenerationJob((prev) =>
+        prev ? { ...prev, running: false, done: true, success: false } : null
+      );
     }
   }
 
+  // Allow updating state from outside (use functional update)
+  const setGenerationJobFn = (fn: (prev: typeof generationJob) => typeof generationJob) => {
+    setGenerationJob(fn(generationJob));
+  };
+  // Provide functional update to the generate handler
+  void setGenerationJobFn;
+
   async function handleAddToGame() {
-    if (!result?.slug) return;
+    if (!generationJob?.slug) return;
     setAddStatus("adding");
     try {
       const res = await fetch("/api/generate-add", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug: result.slug }),
+        body: JSON.stringify({ slug: generationJob.slug }),
       });
       const data = await res.json();
       if (data.ok) {
@@ -122,16 +112,13 @@ export default function GeneratePage() {
     }
   }
 
-  const isRunning = status === "running";
-  const isDone = status === "done";
-
   return (
     <div className="min-h-screen bg-neutral-950 text-neutral-300 flex flex-col">
-      {/* Header */}
       <div className="border-b border-neutral-900 px-6 py-3 flex items-center justify-between">
         <span className="text-xs text-neutral-600 tracking-widest">劇本生成器</span>
         <Link href="/" className="text-xs text-neutral-700 hover:text-neutral-500 transition-colors">
           ← 返回遊戲
+          {isRunning && <span className="ml-2 text-amber-700 animate-pulse">（生成中）</span>}
         </Link>
       </div>
 
@@ -141,7 +128,8 @@ export default function GeneratePage() {
           <div>
             <h1 className="text-sm text-neutral-400 mb-1">山霧旅館</h1>
             <p className="text-xs text-neutral-600 leading-relaxed">
-              輸入主題和風格關鍵字，AI 自動生成一個完整的規則怪談劇本並加入遊戲。
+              輸入主題和風格關鍵字，AI 自動生成完整規則怪談劇本並加入遊戲。
+              生成中可以離開此頁面回去玩遊戲。
             </p>
           </div>
 
@@ -150,7 +138,7 @@ export default function GeneratePage() {
               type="text"
               value={theme}
               onChange={(e) => setTheme(e.target.value)}
-              placeholder="廢棄醫院、深夜辦公大樓…"
+              placeholder="寄宿學校、深夜辦公大樓…"
               disabled={isRunning}
               className="w-full bg-neutral-900 border border-neutral-800 text-neutral-300 text-sm px-3 py-2 focus:outline-none focus:border-neutral-600 placeholder-neutral-700 disabled:opacity-50"
             />
@@ -161,7 +149,7 @@ export default function GeneratePage() {
               type="text"
               value={keywords}
               onChange={(e) => setKeywords(e.target.value)}
-              placeholder="isolation clinical、corporate liminal…"
+              placeholder="institutional dormitory surveillance…"
               disabled={isRunning}
               className="w-full bg-neutral-900 border border-neutral-800 text-neutral-300 text-sm px-3 py-2 focus:outline-none focus:border-neutral-600 placeholder-neutral-700 disabled:opacity-50"
             />
@@ -176,7 +164,7 @@ export default function GeneratePage() {
               disabled={isRunning}
               className="w-full bg-neutral-900 border border-neutral-800 text-neutral-300 text-sm px-3 py-2 focus:outline-none focus:border-neutral-600 placeholder-neutral-700 disabled:opacity-50 font-mono"
             />
-            <p className="text-xs text-neutral-700 mt-1">Key 只用於此次生成，不會被儲存</p>
+            <p className="text-xs text-neutral-700 mt-1">Key 只用於此次生成，不儲存</p>
           </Field>
 
           <button
@@ -184,11 +172,10 @@ export default function GeneratePage() {
             disabled={isRunning || !theme.trim() || !apiKey.trim()}
             className="px-4 py-2.5 text-sm border border-neutral-700 text-neutral-400 hover:border-neutral-500 hover:text-neutral-200 transition-colors disabled:opacity-30 disabled:cursor-not-allowed mt-2"
           >
-            {isRunning ? "生成中…" : "開始生成"}
+            {isRunning ? `生成中：${generationJob?.theme}…` : "開始生成"}
           </button>
 
-          {/* Add to game button */}
-          {isDone && addStatus !== "added" && (
+          {isDone && generationJob?.success && addStatus !== "added" && (
             <button
               onClick={handleAddToGame}
               disabled={addStatus === "adding"}
@@ -203,46 +190,44 @@ export default function GeneratePage() {
               {addMessage}
             </div>
           )}
-
           {addStatus === "error" && (
             <div className="text-xs text-red-700 leading-relaxed border border-red-900/30 p-3">
               {addMessage}
             </div>
           )}
 
-          {/* Pipeline info */}
           <div className="mt-auto text-xs text-neutral-800 leading-loose border-t border-neutral-900 pt-4">
-            <div>概念師 → 規則師 → 協調師</div>
-            <div>→ [事件師 ‖ 對話師]</div>
-            <div>→ 結局師 → 程式碼師 → 驗證師</div>
-            <div className="mt-2">約需 3-6 分鐘</div>
+            <div>概念 → 規則(2a+2b) → 合約(2c)</div>
+            <div>→ [事件 ‖ 對話] → 結局 → 程式碼 → 驗證</div>
+            <div className="mt-2">約需 3-6 分鐘 · 可切換頁面</div>
           </div>
         </div>
 
         {/* Right: Log */}
         <div className="flex-1 flex flex-col overflow-hidden min-h-0">
           <div className="border-b border-neutral-900 px-4 py-2 text-xs text-neutral-700 flex items-center justify-between">
-            <span>執行日誌</span>
-            {status === "running" && (
-              <span className="text-amber-700 animate-pulse">● 生成中</span>
-            )}
-            {status === "done" && <span className="text-green-700">● 完成</span>}
-            {status === "error" && <span className="text-red-700">● 失敗</span>}
+            <span>
+              執行日誌
+              {generationJob && <span className="ml-2 text-neutral-600">— {generationJob.theme}</span>}
+            </span>
+            {isRunning && <span className="text-amber-700 animate-pulse">● 生成中</span>}
+            {isDone && generationJob?.success && <span className="text-green-700">● 完成</span>}
+            {isDone && !generationJob?.success && <span className="text-red-700">● 失敗</span>}
           </div>
           <div className="flex-1 overflow-y-auto p-4 font-mono text-xs leading-relaxed">
-            {logs.length === 0 && (
+            {(!generationJob || generationJob.logs.length === 0) && (
               <div className="text-neutral-800 mt-8 text-center">
-                填寫左側表單並按「開始生成」
+                {generationJob?.running ? "等待輸出…" : "填寫左側表單並按「開始生成」"}
               </div>
             )}
-            {logs.map((entry) => (
-              <div
-                key={entry.id}
-                className={entry.isHeader ? "text-amber-200/60 mt-2" : "text-neutral-600"}
-              >
-                {entry.text}
-              </div>
-            ))}
+            {generationJob?.logs.map((line, i) => {
+              const isHeader = line.startsWith("[Agent") || line.startsWith("✅") || line.startsWith("❌") || line.startsWith("🎭") || line.startsWith("[後");
+              return (
+                <div key={i} className={isHeader ? "text-amber-200/60 mt-2" : "text-neutral-600"}>
+                  {line.trim()}
+                </div>
+              );
+            })}
             <div ref={logEndRef} />
           </div>
         </div>

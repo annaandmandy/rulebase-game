@@ -1,20 +1,19 @@
+import type { ScenarioPack } from "@/types/scenario";
+import type { PlayerState, WorldState } from "@/types/game";
 import { SCENARIO_EVENTS } from "./events";
 import { getRules } from "./rules";
 import { SCENARIO_RULE_SHEETS } from "./ruleSheets";
-import { checkScenarioEnding, SCENARIO_ENDINGS } from "./endings";
+import { checkScenarioEnding } from "./endings";
 import { SCENARIO_DIALOGUES } from "./dialogues";
 import { SCENARIO_LOCATIONS } from "./locationActions";
-import type { ScenarioPack } from "@/types/scenario";
-import type { PlayerState, WorldState } from "@/types/game";
 
-const START_MINUTES = 1387; // 深夜 23:07
+const START_MINUTES = 1303; // 21:43
 
-// Opening check-in event (first event the player sees)
-const CHECKIN_EVENT = SCENARIO_EVENTS.find((e) => e.once === true && e.id.includes("admission"))
+const CHECKIN_EVENT = SCENARIO_EVENTS.find((e) => e.once === true)
   ?? SCENARIO_EVENTS[0];
 
 const initialPlayer = {
-  currentLocation: "triage_desk",
+  currentLocation: "dormitory_entrance",
   timeMinutes: START_MINUTES,
   sanity: 100,
   suspicion: 0,
@@ -38,7 +37,7 @@ const initialPlayer = {
 } as PlayerState;
 
 const initialWorld = {
-  fogDensity: 60,
+  fogDensity: 40,
   hotelRealityStability: 100,
   elevatorState: "normal" as const,
   staffMode: "normal" as const,
@@ -48,12 +47,12 @@ const initialWorld = {
 } as WorldState;
 
 export const SCENARIO_PACK: ScenarioPack = {
-  id: "night_observation_protocol",
-  name: "夜間留觀須知",
-  nameEn: "Night Observation Protocol",
-  tagline: "你只是來夜間留觀，天亮就能出院——如果你還算是病患的話。",
+  id: "after_evening_study",
+  name: "晚自習結束之後",
+  nameEn: "After Evening Study",
+  tagline: "鐘響了三次，但時刻表上今晚只該響兩次。",
   description:
-    "你在深夜因不明原因被轉送到這間早該廢棄的市立醫院附設留觀區。\n日光燈仍亮著，掛號單上有你的名字，一切都太乾淨、太安靜。",
+    "你是私立惠生中學住宿部的轉學生，被安排在學期中入住。\n發給你一份《夜間作息須知》，整層樓似乎只剩你一個學生。",
   initialPlayer,
   initialWorld,
   locations: SCENARIO_LOCATIONS,

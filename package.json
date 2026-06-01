@@ -6,7 +6,8 @@
     "dev": "next dev --port 5500",
     "build": "next build",
     "start": "next start",
-    "generate": "tsx scripts/generateScenario.ts"
+    "generate": "tsx scripts/generateScenario.ts",
+    "auto-generate": "tsx scripts/autoGenerate.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.100.1",

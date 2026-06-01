@@ -11,7 +11,7 @@ type ScenarioEnding = GameEnding & {
   condition: (player: PlayerState, world: WorldState) => boolean;
 };
 
-const endings: ScenarioEnding[] = [
+export const SCENARIO_ENDINGS: ScenarioEnding[] = [
   {
     id: 'ending_never_registered',
     title: '從未掛號的人',
@@ -109,14 +109,14 @@ export function checkScenarioEnding(
   forcedId?: string
 ): GameEnding | null {
   if (forcedId) {
-    const forced = endings.find((e) => e.id === forcedId);
+    const forced = SCENARIO_ENDINGS.find((e) => e.id === forcedId);
     if (forced) {
       return forced;
     }
     return null;
   }
 
-  for (const ending of endings) {
+  for (const ending of SCENARIO_ENDINGS) {
     if (ending.condition(player, world)) {
       return ending;
     }

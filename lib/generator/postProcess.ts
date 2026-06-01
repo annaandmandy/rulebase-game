@@ -64,10 +64,27 @@ export async function postProcess(
       }
     );
 
+    // Fix RuleSheet import — it's in @/lib/ruleSheets, not @/types/game
+    if (file === "ruleSheets.ts") {
+      content = content
+        .replace(/from ["']@\/types\/game["']/g, 'from "@/lib/ruleSheets"')
+        .replace(/from ["']\.\.?\/types["']/g, 'from "@/lib/ruleSheets"');
+    }
+
+    // Fix (p, w, m) => in locationActions — location conditions only get (player, world)
+    if (file === "locationActions.ts") {
+      content = content.replace(/\(p, w, m\) =>/g, "(p, w) =>");
+    }
+
+    // Remove bad type casts on conditions: ) as unknown as string
+    content = content.replace(/\) as unknown as string/g, ")");
+
     // 2. Convert string conditions to arrow functions
     // Must handle nested quotes: "player.arr.includes('id')" and 'player.arr.includes("id")'
     const convertCondition = (expr: string): string => {
-      return `(p, w, m) => ${expr.replace(/\bplayer\./g, "p.").replace(/\bworld\./g, "w.").replace(/\bmemory\./g, "m.")}`;
+      const isLocationFile = file === "locationActions.ts" || file === "endings.ts";
+      const params = isLocationFile ? "(p, w)" : "(p, w, m)";
+      return `${params} => ${expr.replace(/\bplayer\./g, "p.").replace(/\bworld\./g, "w.").replace(/\bmemory\./g, "m.")}`;
     };
     // Double-quoted condition (may contain single quotes inside)
     content = content.replace(
@@ -115,12 +132,27 @@ export async function postProcess(
       });
     }
 
-    // 3. Fix ScenarioPack import in index.ts
+    // 4. Fix index.ts — remove locally-redeclared types, fix imports
     if (file === "index.ts") {
+      // Remove local type redeclarations that shadow @/types/* imports
+      content = content.replace(/^export type (PlayerState|WorldState|ScenarioPack|GameEvent|GameEnding) = \{[\s\S]*?\n\};\n/gm, "");
+      // Ensure correct imports
       if (!content.includes("@/types/scenario") && content.includes("ScenarioPack")) {
         content = `import type { ScenarioPack } from "@/types/scenario";\n` + content;
         fixed.push("Added missing ScenarioPack import to index.ts");
       }
+      if (!content.includes("@/types/game") && (content.includes("PlayerState") || content.includes("WorldState"))) {
+        content = `import type { PlayerState, WorldState } from "@/types/game";\n` + content;
+        fixed.push("Added missing game types import to index.ts");
+      }
+      // Ensure initialPlayer/World are cast, not typed
+      content = content
+        .replace(/const initialPlayer: PlayerState = \{/g, "const initialPlayer = {")
+        .replace(/const initialWorld: WorldState = \{/g, "const initialWorld = {");
+      // Add casts after closing braces of initial state objects
+      content = content
+        .replace(/\} as unknown as PlayerState/g, "} as PlayerState")
+        .replace(/\} as unknown as WorldState/g, "} as WorldState");
     }
 
     if (content !== original) {

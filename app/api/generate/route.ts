@@ -1,8 +1,25 @@
 import { spawn } from "child_process";
 import { join } from "path";
+import { writeFile, readFile } from "fs/promises";
 
 export const runtime = "nodejs";
-export const maxDuration = 600; // 10 minutes
+export const maxDuration = 600;
+
+// Simple file-based job store so any client can poll status
+const JOB_FILE = join(process.cwd(), ".generation-job.json");
+
+async function writeJob(job: Record<string, unknown>) {
+  await writeFile(JOB_FILE, JSON.stringify(job, null, 2)).catch(() => {});
+}
+
+export async function GET() {
+  try {
+    const raw = await readFile(JOB_FILE, "utf-8");
+    return Response.json(JSON.parse(raw));
+  } catch {
+    return Response.json({ running: false });
+  }
+}
 
 export async function POST(request: Request) {
   const { theme, keywords, apiKey } = await request.json() as {
@@ -16,43 +33,52 @@ export async function POST(request: Request) {
   }
 
   const projectRoot = process.cwd();
+  const slug = theme.replace(/\s+/g, "_").replace(/[^\w一-鿿]/g, "");
   const scriptPath = join(projectRoot, "scripts", "generateScenario.ts");
 
+  await writeJob({ running: true, theme, slug, startedAt: Date.now(), logs: [] });
+
   const encoder = new TextEncoder();
+  const allLogs: string[] = [];
 
   const stream = new ReadableStream({
     start(controller) {
       const send = (type: string, payload: Record<string, unknown>) => {
-        const line = `data: ${JSON.stringify({ type, ...payload })}\n\n`;
-        controller.enqueue(encoder.encode(line));
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type, ...payload })}\n\n`));
       };
 
-      const proc = spawn("npx", ["tsx", scriptPath, theme, ...(keywords ? [keywords] : [])], {
-        cwd: projectRoot,
-        env: {
-          ...process.env,
-          ANTHROPIC_API_KEY: apiKey,
-          FORCE_COLOR: "0",
-        },
-      });
+      const proc = spawn(
+        "npx",
+        ["tsx", scriptPath, theme, ...(keywords ? [keywords] : [])],
+        {
+          cwd: projectRoot,
+          env: { ...process.env, ANTHROPIC_API_KEY: apiKey, FORCE_COLOR: "0" },
+          detached: false,
+        }
+      );
 
-      proc.stdout.on("data", (data: Buffer) => {
-        const text = data.toString().replace(/\x1B\[[0-9;]*m/g, ""); // strip ANSI
-        send("log", { message: text });
-      });
+      const handleOutput = (text: string) => {
+        const clean = text.replace(/\x1B\[[0-9;]*m/g, "");
+        allLogs.push(clean);
+        // Persist logs every ~5 entries so polling can read them
+        if (allLogs.length % 5 === 0) {
+          writeJob({ running: true, theme, slug, startedAt: Date.now(), logs: allLogs.slice(-20) });
+        }
+        send("log", { message: clean });
+      };
 
-      proc.stderr.on("data", (data: Buffer) => {
-        const text = data.toString().replace(/\x1B\[[0-9;]*m/g, "");
-        if (text.trim()) send("log", { message: text });
-      });
+      proc.stdout.on("data", (d: Buffer) => handleOutput(d.toString()));
+      proc.stderr.on("data", (d: Buffer) => { if (d.toString().trim()) handleOutput(d.toString()); });
 
       proc.on("close", (code) => {
-        const slug = theme.replace(/\s+/g, "_").replace(/[^\w一-鿿]/g, "");
-        send("done", { success: code === 0, slug, theme });
+        const success = code === 0;
+        writeJob({ running: false, theme, slug, success, doneAt: Date.now(), logs: allLogs.slice(-20) });
+        send("done", { success, slug, theme });
         controller.close();
       });
 
       proc.on("error", (err) => {
+        writeJob({ running: false, theme, slug, success: false, error: err.message });
         send("error", { message: err.message });
         controller.close();
       });

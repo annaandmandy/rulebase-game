@@ -7,7 +7,7 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 
 export function ScenarioSelectScreen() {
-  const { selectScenario } = useGameStore();
+  const { selectScenario, generationJob } = useGameStore();
 
   return (
     <div className="min-h-screen bg-neutral-950 flex flex-col items-center justify-center px-6 py-12">
@@ -46,9 +46,19 @@ export function ScenarioSelectScreen() {
         <div className="text-center">
           <Link
             href="/generate"
-            className="text-xs text-neutral-800 hover:text-neutral-600 transition-colors border border-neutral-900 px-4 py-2 inline-block"
+            className={`text-xs transition-colors border px-4 py-2 inline-block ${
+              generationJob?.running
+                ? "text-amber-700/80 border-amber-900/50 animate-pulse"
+                : generationJob?.done && generationJob.success
+                ? "text-green-700 border-green-900/50"
+                : "text-neutral-800 hover:text-neutral-600 border-neutral-900"
+            }`}
           >
-            + 生成新劇本
+            {generationJob?.running
+              ? `生成中：${generationJob.theme}…`
+              : generationJob?.done && generationJob.success
+              ? `✓ ${generationJob.theme} 完成`
+              : "+ 生成新劇本"}
           </Link>
         </div>
       </motion.div>

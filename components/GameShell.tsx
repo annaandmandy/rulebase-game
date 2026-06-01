@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useGameStore } from "@/lib/gameState";
+import Link from "next/link";
 import { StatusPanel } from "./StatusPanel";
 import { NarrativePanel } from "./NarrativePanel";
 import { RuleNotice } from "./RuleNotice";
@@ -11,7 +12,7 @@ import { ScenarioSelectScreen } from "./ScenarioSelectScreen";
 import { motion, AnimatePresence } from "framer-motion";
 
 export function GameShell() {
-  const { phase, world, goToScenarioSelect } = useGameStore();
+  const { phase, world, goToScenarioSelect, generationJob } = useGameStore();
 
   useEffect(() => {
     useGameStore.persist.rehydrate();
@@ -81,7 +82,18 @@ export function GameShell() {
               <span className="text-xs text-neutral-700 tracking-widest font-light">
                 {useGameStore.getState().selectedScenario?.name ?? ""}
               </span>
-              <div className="w-10" />
+              <div className="w-10 flex justify-end">
+                {generationJob?.running && (
+                  <Link href="/generate" className="text-xs text-amber-800/70 hover:text-amber-700 animate-pulse">
+                    生成中
+                  </Link>
+                )}
+                {generationJob?.done && generationJob.success && (
+                  <Link href="/generate" className="text-xs text-green-800/70 hover:text-green-700">
+                    新劇本完成
+                  </Link>
+                )}
+              </div>
             </div>
 
             {/* Main layout */}

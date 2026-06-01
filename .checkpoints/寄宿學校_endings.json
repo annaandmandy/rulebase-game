@@ -1,0 +1,40 @@
+{
+  "endings": [
+    {
+      "id": "ending_archived",
+      "title": "歸檔在床",
+      "text": "起床鐘在七點整響起。你躺在床上，被子拉到下巴，像規則要求的那樣安靜等待。\n\n舍監的腳步沿著走廊一張床一張床地數過來。停在你的床尾。你聽見筆尖劃過紙面的聲音，很輕，卻劃了很久——彷彿不是在勾選，而是在補寫一個一直空著的欄位。\n\n「應到三十八人，實到三十八人。」舍監的聲音終於完整了。多年以來，這個數字第一次不缺。\n\n你想說你只是昨晚才入住的，你不在這層樓的名冊上。但你昨夜在床上應了「到」，今晨又在床上被確認。兩次。登記簿不問你來自哪裡，它只記錄你是否在床。\n\n陽光照進寢室，走廊裡傳來其他人起床、盥洗、上學的聲音。一切如常。你也起身，換上不知何時掛在床頭、繡著別人名字的制服。\n\n你會在這裡讀完一個永遠不會畢業的學期。每晚熄燈、點名、應答。每晨七點，被確認一次仍在床上。\n\n名冊終於不再缺人。那麼，原本缺的那一個，去了哪裡？",
+      "condition": "player.flags.answeredRollCall && player.flags.stayedInBedAtSeven && player.events.includes('event_roll_call') && player.events.includes('event_morning_rollcheck') && !player.flags.leftBedBeforeSeven"
+    },
+    {
+      "id": "ending_true_escape",
+      "title": "黎明前從未被點到",
+      "text": "你沒有應答昨夜的點名。你在六點五十分離開了床，赤腳踩在冰冷的地板上，避開西側樓梯——前任住宿生的字條說那不是出口，只是另一種登記。\n\n你按原始時刻表上的提示，走到晚自習教室，從黑板夾層後那道從未被熄燈鐘封住的門離開。\n\n身後七點的起床鐘響了。你聽見舍監開始在床確認，一個名字一個名字地唱。沒有你的。名單上從來沒有你，因為你從未被記成「在床」。\n\n校門外的晨霧裡，公車站牌、早餐店、上學的人潮，全都真實得讓你眼眶發熱。你回頭看了一眼宿舍那棟樓。窗戶一格一格亮起，整整一層樓的燈，準時、整齊、安靜。\n\n那層樓住滿了人。每一個都在床上，每一個都被確認過。\n\n你逃出來了。可是你忽然想不起來，自己究竟是哪一天住進去的——\n\n還是說，你本來就是來找人的，而你要找的那個人，昨晚也應了「到」？",
+      "condition": "player.flags.avoidedRollCall && player.flags.leftBedBeforeSeven && player.flags.foundOriginalTimetable && player.events.includes('event_morning_rollcheck') && player.events.includes('event_west_stairwell') && !player.flags.answeredRollCall && !player.flags.signedInfirmaryLog"
+    },
+    {
+      "id": "ending_lobby_devoured",
+      "title": "大廳的值班人員",
+      "text": "走廊的日光燈全暗了。官方須知寫得清楚：遇緊急狀況，請至一樓大廳尋求值班人員協助。於是你扶著牆，一階一階摸黑下樓，朝著大廳那盞唯一還亮著的燈走去。\n\n櫃檯後坐著一個人。穿著舍監的制服，低著頭，在登記簿上寫字。你鬆了一口氣，開口求助。\n\n他抬起頭。\n\n員工備忘錄上有一行你當時沒看懂的字：「凌晨後大廳之值班人員，非本校正式編制，請住宿生切勿於熄燈後前往大廳。」備忘錄沒有寫，凌晨後坐在那裡的，到底是什麼在替代正式員工。\n\n他很有耐心地聽你說完。然後翻開登記簿，問你的名字。\n\n大廳的燈是整棟樓最後熄滅的一盞。你在它熄滅之前，最後看見的，是自己的名字被工整地、緩慢地，補進那一頁的空行裡。\n\n求助是被允許的。只是沒有人告訴你，值班人員的工作，從來不是把人送出去。",
+      "condition": "player.flags.wentToLobby && player.events.includes('event_corridor_curfew')"
+    },
+    {
+      "id": "ending_third_bell_listed",
+      "title": "替你補上的第三響",
+      "text": "規則說，每晚鐘聲響起兩次：晚自習結束鐘，與熄燈鐘。你數著，一響，兩響，然後乖乖躺下，等待天亮。\n\n可是你聽見了第三響。\n\n它不在時刻表上，不在官方須知裡，只在員工備忘錄一行被劃掉又重描的字句中提過：「第三次鐘聲非作息用途，係為確認本層在籍人數。聞者請勿起身。」\n\n你沒有起身。你只是躺著，聽那第三響在空蕩的走廊裡迴盪，一聲，又一聲，像有人拿著名冊，逐格清點，數到缺額的地方，停了下來。\n\n鐘聲是在等一個答數。等一個多年來一直空著的座號被填上。\n\n你躺在黑暗裡，忽然非常清楚地意識到，那個一直空著的位置，就是你現在躺著的這張床。\n\n第三響為你而敲。它一直只差你一個人。\n\n天亮了，鐘聲停了。名冊上不再有缺。而你，再也沒能想起，自己是被哪一響鐘聲，留了下來。",
+      "condition": "player.flags.heardThirdBell && player.events.includes('event_third_bell') && !player.flags.leftBedBeforeSeven"
+    },
+    {
+      "id": "ending_infirmary_logged",
+      "title": "登記簿上的又一行",
+      "text": "你覺得不舒服。喉嚨發燙，額頭滾熱——多年前那場流感，似乎也是這樣開始的。規則說，身體不適者請至保健室登記體溫，簽下本名，以便隔日追蹤。\n\n保健室的燈是溫暖的黃色。登記簿攤開著，上面已有許多名字，墨色深淺不一，最舊的那些幾乎褪盡了。你在最末一行，工整地簽下自己的本名，量了體溫，三十八度多。\n\n護理人員看了一眼，點點頭：「沒事，隔離一晚，明天追蹤。」\n\n那是一句聽起來最正常的話。可是員工備忘錄裡寫著：歸檔程序共三項，其一為「在保健登記簿留存本名」。你親手完成了其中一項。\n\n你回到床上。七點的起床鐘響時，舍監來做在床確認。她對照著保健室送來的名單，在你的名字旁，打了一個勾。\n\n「隔日追蹤」的隔日，永遠不會來。因為這一夜，從來沒有真正結束過。\n\n登記簿很厚。多年來，每一頁的最後一行，都曾經有人，以為自己只是病了一場。",
+      "condition": "player.flags.signedInfirmaryLog && player.events.includes('event_infirmary_sign') && player.events.includes('event_morning_rollcheck') && !player.flags.leftBedBeforeSeven"
+    },
+    {
+      "id": "ending_confirmed_silent",
+      "title": "沉默卻仍在床",
+      "text": "你做對了一半。\n\n昨夜舍監點名，唱到你的姓名時，你咬緊牙關，沒有應答。前任住宿生的字條救了你——應了「到」，名單上就永遠有你。你沉默著，讓自己沒有被記成在床。\n\n你以為這樣就夠了。\n\n可是天快亮時，你猶豫了。原始時刻表上那行字你看見了，卻不敢信：「唯有未在床者，明日才會真正離開。」離開床，在這個處處是規則的夜裡，感覺像是最危險的違規。於是七點的鐘響時，你還是躺著。乖乖地，在床上。\n\n舍監走來。她沒有你的應答紀錄，名單上你那一格是空的。她停在你床尾，看著躺在床上的你，又看看手中沒有你名字的名冊。\n\n她拿起筆。\n\n沉默讓你沒有被點到。可是七點的在床確認，看的不是名冊上的名字——它看的是床上有沒有人。\n\n你躺在那裡，成了一個沒有名字、卻確實在床的存在。名單補不上你，於是它在最末，新畫了一行空白的格子，剛好夠寫下一個還沒被問出來的名字。",
+      "condition": "player.flags.avoidedRollCall && player.flags.stayedInBedAtSeven && player.events.includes('event_morning_rollcheck') && !player.flags.leftBedBeforeSeven"
+    }
+  ]
+}

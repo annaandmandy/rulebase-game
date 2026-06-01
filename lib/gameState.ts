@@ -7,7 +7,21 @@ import { getScenarioById } from "./scenarioRegistry";
 import { DialogueMemory } from "@/types/dialogue";
 import { Dialogue, DialogueChoice } from "@/types/dialogue";
 
+export type GenerationJob = {
+  theme: string;
+  slug: string;
+  running: boolean;
+  done: boolean;
+  success?: boolean;
+  logs: string[];
+};
+
 export type GameStore = {
+  // Background scenario generation
+  generationJob: GenerationJob | null;
+  setGenerationJob: (job: GenerationJob | null | ((prev: GenerationJob | null) => GenerationJob | null)) => void;
+  appendGenerationLog: (line: string) => void;
+
   // Scenario
   selectedScenario: ScenarioPack | null;
   scenarioId: string | null;
@@ -164,6 +178,18 @@ const BLANK_WORLD: WorldState = {
 export const useGameStore = create<GameStore>()(
   persist(
     (set, get) => ({
+      generationJob: null,
+      setGenerationJob: (job) =>
+        set((s) => ({
+          generationJob: typeof job === "function" ? job(s.generationJob) : job,
+        })),
+      appendGenerationLog: (line) =>
+        set((s) =>
+          s.generationJob
+            ? { generationJob: { ...s.generationJob, logs: [...s.generationJob.logs.slice(-50), line] } }
+            : {}
+        ),
+
       selectedScenario: null,
       scenarioId: null,
       player: BLANK_PLAYER,
