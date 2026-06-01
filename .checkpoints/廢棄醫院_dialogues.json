@@ -1,0 +1,521 @@
+{
+  "dialogues": [
+    {
+      "id": "night_nurse_dialogue",
+      "npcName": "夜班護理師（胸牌寫著「林」）",
+      "location": "observation_ward",
+      "startScene": "greet",
+      "scenes": {
+        "greet": {
+          "npcText": "您醒著真好。我是這班的林，負責協助您完成留觀。手環戴了嗎？黎明交班前，我們把程序走完就好。",
+          "choices": [
+            {
+              "id": "g1",
+              "label": "我想先問幾件事",
+              "next": "main_menu"
+            },
+            {
+              "id": "g2",
+              "label": "你怎麼一直盯著我",
+              "next": "topic_others"
+            }
+          ]
+        },
+        "main_menu": {
+          "npcText": "別緊張，問什麼都行。只要在交班前回到床位，一切都會很順利的。",
+          "choices": [
+            {
+              "id": "m1",
+              "label": "留觀要做哪些事",
+              "next": "topic_procedure"
+            },
+            {
+              "id": "m2",
+              "label": "其他病床的人呢",
+              "next": "topic_others"
+            },
+            {
+              "id": "m3",
+              "label": "哪裡不能去",
+              "next": "topic_restricted"
+            },
+            {
+              "id": "m4",
+              "label": "怎麼出院",
+              "next": "topic_discharge"
+            },
+            {
+              "id": "m5",
+              "label": "問問護理師林",
+              "condition": "player.foundSheets.includes('doc_staff_handover_memo')",
+              "next": "confront_nurse"
+            },
+            {
+              "id": "m6",
+              "label": "交班廣播是什麼",
+              "condition": "player.foundSheets.includes('doc_previous_patient_note')",
+              "next": "topic_broadcast"
+            },
+            {
+              "id": "m7",
+              "label": "作廢病歷的事",
+              "condition": "player.foundSheets.includes('doc_records_label')",
+              "next": "confront_records"
+            },
+            {
+              "id": "m8",
+              "label": "先這樣，謝謝",
+              "next": "farewell"
+            }
+          ]
+        },
+        "topic_procedure": {
+          "npcText": "戴手環、量體溫、補完病史，三項。填完欄位，您的身分就確定了。交給我，您只要躺好。",
+          "choices": [
+            {
+              "id": "p1",
+              "label": "為何一定要戴手環",
+              "next": "topic_restricted"
+            },
+            {
+              "id": "p2",
+              "label": "我可以不填病史嗎",
+              "condition": "player.foundSheets.includes('doc_previous_patient_note')",
+              "next": "topic_refuse_form"
+            },
+            {
+              "id": "p3",
+              "label": "回上一頁",
+              "next": "main_menu"
+            }
+          ]
+        },
+        "topic_others": {
+          "npcText": "其他病床？依規定我不能透露留觀者的身分。他們……和您一樣，都還沒交班完。請別去看別的床。",
+          "choices": [
+            {
+              "id": "o1",
+              "label": "有床是空的嗎",
+              "next": "topic_restricted"
+            },
+            {
+              "id": "o2",
+              "label": "回上一頁",
+              "next": "main_menu"
+            }
+          ]
+        },
+        "topic_restricted": {
+          "npcText": "病歷室您不能進，那是院方調閱的地方。手環也別拆——監視器要是變一直線，我得馬上過來，那很麻煩。",
+          "choices": [
+            {
+              "id": "r1",
+              "label": "對誰麻煩",
+              "next": "topic_restricted_2"
+            },
+            {
+              "id": "r2",
+              "label": "回上一頁",
+              "next": "main_menu"
+            }
+          ]
+        },
+        "topic_restricted_2": {
+          "npcText": "……對交班的人。一直線代表這張床空了，名冊就會少一份。我們不希望少。所以請您，留著波形。",
+          "choices": [
+            {
+              "id": "r3",
+              "label": "了解了",
+              "next": "main_menu"
+            }
+          ]
+        },
+        "topic_discharge": {
+          "npcText": "出院到一樓批價就好，批完玻璃門會開。別在批價前硬走——上一位這樣的，現在還在等他的波形回來。",
+          "choices": [
+            {
+              "id": "d1",
+              "label": "上一位是誰",
+              "next": "topic_others"
+            },
+            {
+              "id": "d2",
+              "label": "回上一頁",
+              "next": "main_menu"
+            }
+          ]
+        },
+        "topic_broadcast": {
+          "npcText": "廣播說「交班時間」，您就回床躺好讓我核對，這樣最安全。",
+          "choices": [
+            {
+              "id": "b1",
+              "label": "紙條說別回床，往上跑",
+              "next": "topic_flee"
+            },
+            {
+              "id": "b2",
+              "label": "回上一頁",
+              "next": "main_menu"
+            }
+          ]
+        },
+        "topic_flee": {
+          "npcText": "往上？……那段樓梯的燈很少亮。亮的那一次，是給還沒被核對的人走的。我那次……沒走成。別跟我學。",
+          "choices": [
+            {
+              "id": "f1",
+              "label": "你也想逃過",
+              "setMemory": {
+                "knowsNurseTrapped": true
+              },
+              "next": "confront_nurse"
+            },
+            {
+              "id": "f2",
+              "label": "回上一頁",
+              "next": "main_menu"
+            }
+          ]
+        },
+        "topic_refuse_form": {
+          "npcText": "不填？沒填完的欄位，黎明會由院方替您補。補出來的，就不一定是您了。乖乖填，比較像自己。",
+          "choices": [
+            {
+              "id": "rf1",
+              "label": "那我寧可空著",
+              "setMemory": {
+                "consideredVoiding": true
+              },
+              "next": "main_menu"
+            },
+            {
+              "id": "rf2",
+              "label": "回上一頁",
+              "next": "main_menu"
+            }
+          ]
+        },
+        "confront_nurse": {
+          "npcText": "備忘錄……上面寫林是上一班沒走出去的留觀者，對吧。胸牌是真的。名字也是。只是不再是給活人用的。",
+          "choices": [
+            {
+              "id": "c1",
+              "label": "那你為何還幫我",
+              "next": "confront_nurse_2"
+            },
+            {
+              "id": "c2",
+              "label": "我不需要你協助",
+              "setMemory": {
+                "refusedNurseHelp": true
+              },
+              "next": "main_menu"
+            },
+            {
+              "id": "c3",
+              "label": "我願意配合你",
+              "setMemory": {
+                "acceptedNurseHelp": true
+              },
+              "next": "confront_nurse_help"
+            }
+          ]
+        },
+        "confront_nurse_2": {
+          "npcText": "因為協助完一個人收治，我才能交班、才能換我下去。我不是壞人。我只是……很想下班。",
+          "choices": [
+            {
+              "id": "c4",
+              "label": "我會自己想辦法",
+              "setMemory": {
+                "refusedNurseHelp": true
+              },
+              "next": "main_menu"
+            },
+            {
+              "id": "c5",
+              "label": "那我替你留下來",
+              "setMemory": {
+                "acceptedNurseHelp": true
+              },
+              "next": "confront_nurse_help"
+            }
+          ]
+        },
+        "confront_nurse_help": {
+          "npcText": "謝謝您。手環我幫您扣好了。等廣播一響，躺著別動，下一班的她就是您了。我先走了，真的謝謝。",
+          "choices": [
+            {
+              "id": "ch1",
+              "label": "等等——",
+              "next": "main_menu"
+            }
+          ]
+        },
+        "confront_records": {
+          "npcText": "標籤說……作廢病歷？您要把自己變成從未掛號的人？那名冊就找不到您了。連我也核對不到。您會……不在。",
+          "choices": [
+            {
+              "id": "rr1",
+              "label": "不在，總比被收治好",
+              "setMemory": {
+                "consideredVoiding": true
+              },
+              "next": "confront_records_2"
+            },
+            {
+              "id": "rr2",
+              "label": "我再想想",
+              "next": "main_menu"
+            }
+          ]
+        },
+        "confront_records_2": {
+          "npcText": "……如果您真要作廢，趁交班廣播前。廣播一響，歸檔就開始，到時連空白都補滿了。我不會攔您。我攔不動了。",
+          "choices": [
+            {
+              "id": "rr3",
+              "label": "記下了",
+              "next": "main_menu"
+            }
+          ]
+        },
+        "farewell": {
+          "npcText": "去吧。記得交班前回床位——這是規則第四條，為您好。要是廣播響了您還在外面……那就不算我交接過了。",
+          "choices": [
+            {
+              "id": "fw1",
+              "label": "離開",
+              "next": null
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "intercom_voice_dialogue",
+      "npcName": "院內廣播",
+      "location": "observation_ward",
+      "startScene": "greet",
+      "scenes": {
+        "greet": {
+          "npcText": "提醒三號床的您，距離黎明交班尚餘時間。本廣播全程陪伴您留觀，請保持就定位。有何需要？",
+          "choices": [
+            {
+              "id": "to_menu",
+              "label": "我想問些事",
+              "next": "main_menu"
+            },
+            {
+              "id": "who_speak",
+              "label": "你是誰在說話？",
+              "next": "ask_identity"
+            }
+          ]
+        },
+        "main_menu": {
+          "npcText": "您的問題本廣播都會以院方版本回覆。請選擇詢問項目，我會在交班前儘量答覆。",
+          "choices": [
+            {
+              "id": "q_handover",
+              "label": "交班時間是什麼",
+              "next": "ask_handover"
+            },
+            {
+              "id": "q_rules",
+              "label": "就定位的規則",
+              "next": "ask_rules"
+            },
+            {
+              "id": "q_restricted",
+              "label": "哪些地方不能去",
+              "next": "ask_restricted"
+            },
+            {
+              "id": "q_others",
+              "label": "其他病患在哪",
+              "next": "ask_others"
+            },
+            {
+              "id": "c_prevnote",
+              "label": "前任的紙條說…",
+              "condition": "player.foundSheets.includes('doc_previous_patient_note')",
+              "next": "confront_prevnote"
+            },
+            {
+              "id": "c_memo",
+              "label": "交班備忘錄寫…",
+              "condition": "player.foundSheets.includes('doc_staff_handover_memo')",
+              "next": "confront_memo"
+            },
+            {
+              "id": "c_records",
+              "label": "病歷室標籤上…",
+              "condition": "player.foundSheets.includes('doc_records_label')",
+              "next": "confront_records"
+            },
+            {
+              "id": "c_official",
+              "label": "留觀須知寫…",
+              "condition": "player.foundSheets.includes('doc_official_observation_guide')",
+              "next": "confront_official"
+            },
+            {
+              "id": "leave",
+              "label": "我先回床位",
+              "next": "end"
+            }
+          ]
+        },
+        "ask_identity": {
+          "npcText": "本廣播即本廣播。您不需要知道話筒後是誰——交班後，那個位置會由今晚完成留觀的人遞補。",
+          "choices": [
+            {
+              "id": "back",
+              "label": "等等，誰遞補？",
+              "next": "main_menu"
+            }
+          ]
+        },
+        "ask_handover": {
+          "npcText": "交班時間將以鈴聲與廣播宣布。屆時請所有留觀者回到自己床位，以便核對人數。核對必須一個不少。",
+          "choices": [
+            {
+              "id": "what_count",
+              "label": "核對什麼人數",
+              "condition": "player.foundSheets.includes('doc_previous_patient_note')",
+              "next": "confront_prevnote"
+            },
+            {
+              "id": "back",
+              "label": "我知道了",
+              "next": "main_menu"
+            }
+          ]
+        },
+        "ask_rules": {
+          "npcText": "規則第四條：廣播播報交班時請就定位、留在床位。這是為您好——留在床上的人，名冊上才查得到。",
+          "choices": [
+            {
+              "id": "not_bed",
+              "label": "不在床上的呢",
+              "next": "ask_rules_2"
+            },
+            {
+              "id": "back",
+              "label": "回去問別的",
+              "next": "main_menu"
+            }
+          ]
+        },
+        "ask_rules_2": {
+          "npcText": "不在床位者，視同自願結束本院關係。本廣播不再為其播報，也不再提醒其黎明。請別讓我提到您的名字。",
+          "choices": [
+            {
+              "id": "back",
+              "label": "……回主選單",
+              "next": "main_menu"
+            }
+          ]
+        },
+        "ask_restricted": {
+          "npcText": "一樓批價櫃台開放。病歷室、以及往上的樓梯——那些區域不在今晚的留觀範圍。請……不必好奇樓上的燈。",
+          "choices": [
+            {
+              "id": "upstairs",
+              "label": "樓上的燈怎麼了",
+              "condition": "player.foundSheets.includes('doc_previous_patient_note')",
+              "next": "confront_prevnote"
+            },
+            {
+              "id": "back",
+              "label": "好，不問了",
+              "next": "main_menu"
+            }
+          ]
+        },
+        "ask_others": {
+          "npcText": "其他病患的位置屬個人隱私，恕本廣播不便透露。請放心，每張床都有人——包含昨晚的三號床。",
+          "choices": [
+            {
+              "id": "yesterday",
+              "label": "昨晚的三號床？",
+              "next": "ask_others_2"
+            },
+            {
+              "id": "back",
+              "label": "我不想聽了",
+              "next": "main_menu"
+            }
+          ]
+        },
+        "ask_others_2": {
+          "npcText": "說錯了。是今晚的三號床。床號是延續的，住的人不一定。歸檔後就分不出來了，所以請務必回床。",
+          "choices": [
+            {
+              "id": "back",
+              "label": "回主選單",
+              "next": "main_menu"
+            }
+          ]
+        },
+        "confront_prevnote": {
+          "npcText": "……那張紙條不該留下。寫它的人沒回床位，所以名冊上他被劃掉了。您若往上跑，燈會亮一次——只一次。",
+          "choices": [
+            {
+              "id": "flee",
+              "label": "那次燈亮我會走",
+              "setMemory": {
+                "knowsUpstairsLight": true
+              },
+              "next": "main_menu"
+            },
+            {
+              "id": "back",
+              "label": "我再想想",
+              "next": "main_menu"
+            }
+          ]
+        },
+        "confront_memo": {
+          "npcText": "備忘錄是內部文件。是的，護理師林這班……不是受訓的那位。手環與監視器只是讓核對時，您看起來還在。",
+          "choices": [
+            {
+              "id": "back",
+              "label": "看起來還在？",
+              "next": "main_menu"
+            }
+          ]
+        },
+        "confront_records": {
+          "npcText": "標籤您看見了。是的，黎明前作廢的病歷無法歸檔，無法歸檔的人不會被核對——也就不曾掛號。本廣播不建議。",
+          "choices": [
+            {
+              "id": "back",
+              "label": "我自己決定",
+              "setMemory": {
+                "knowsVoiding": true
+              },
+              "next": "main_menu"
+            }
+          ]
+        },
+        "confront_official": {
+          "npcText": "須知第七條沒有錯：批價後玻璃門會開。只是須知沒寫——能走到櫃台批價的人，得先通過交班核對。",
+          "choices": [
+            {
+              "id": "back",
+              "label": "原來如此",
+              "next": "main_menu"
+            }
+          ]
+        },
+        "end": {
+          "npcText": "請回到三號床。本廣播會在交班鈴響時再次提醒您。希望屆時，床上的人還是您。",
+          "choices": []
+        }
+      }
+    }
+  ]
+}

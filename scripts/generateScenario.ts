@@ -180,9 +180,18 @@ function extractText(response: Anthropic.Message): string {
 }
 
 function extractJSON<T>(text: string): T {
-  const match = text.match(/```(?:json)?\s*([\s\S]+?)\s*```/);
-  const raw = match ? match[1] : text;
-  return JSON.parse(raw) as T;
+  // Try to extract from fenced code block
+  const fenced = text.match(/```(?:json)?\s*([\s\S]+?)(?:\s*```|$)/);
+  if (fenced) {
+    try { return JSON.parse(fenced[1].trim()) as T; } catch { /* fall through */ }
+  }
+  // Fallback: find first { and last } (handles truncated code blocks)
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+  if (start !== -1 && end !== -1 && end > start) {
+    try { return JSON.parse(text.slice(start, end + 1)) as T; } catch { /* fall through */ }
+  }
+  throw new Error(`Cannot parse JSON from agent output.\n\nFirst 200 chars:\n${text.slice(0, 200)}`);
 }
 
 // One agent call: cached context + agent-specific prompt
@@ -299,72 +308,288 @@ async function runConceiver(client: Anthropic): Promise<ConceptOutput> {
 }
 `,
     "",
-    2000
+    8000
   );
 
   return extractJSON<ConceptOutput>(result);
 }
 
-// ─── Agent 2: 規則設計師 ─────────────────────────────────────────────────────
+// ─── Agent 2a + 2b: 規則設計師（拆成規則 + 文件，避免單次 token 超限）────────
 
-type RulesOutput = {
+type RulesCore = {
   mainRules: {
     number: number;
     text: string;
     mutatedText: string;
     corruptedText: string;
-    triggerDescription: string; // 這條規則應該如何被觸發
+    triggerDescription: string;
   }[];
   locationRules: Record<string, { number: number; text: string }[]>;
+  contradictions: {
+    ruleA: string;
+    ruleB: string;
+    scenario: string;
+  }[];
+};
+
+type RulesDocs = {
   foundDocuments: {
     id: string;
     title: string;
     source: "official" | "previous_occupant" | "staff" | "unknown";
     lines: string[];
-    findLocation: string;  // 在哪個地點找到
-    findAction: string;    // 什麼行動才能找到
-  }[];
-  contradictions: {
-    ruleA: string;
-    ruleB: string;
-    scenario: string;  // 什麼情況下玩家會遇到這個矛盾
+    findLocation: string;
+    findAction: string;
   }[];
 };
+
+export type RulesOutput = RulesCore & RulesDocs;
 
 async function runRulesArchitect(
   client: Anthropic,
   concept: ConceptOutput
 ): Promise<RulesOutput> {
-  const result = await callAgent(
+  const conceptStr = JSON.stringify(concept, null, 2);
+
+  // Agent 2a: 主規則 + 地點規則 + 矛盾
+  const resultA = await callAgent(
     client,
-    "Agent 2 規則設計師",
+    "Agent 2a 規則設計師（規則）",
     `你是一位規則怪談規則系統設計師。你設計讓玩家感到不安的規則，
 每條規則都有其存在的「理由」，但這個理由從來不會被解釋。
-規則必須：官僚語氣、冷靜、帶有隱約不合理感、各有三個版本（original/mutated/corrupted）。`,
+規則必須：官僚語氣、冷靜、帶有隱約不合理感。
+重要：你的輸出必須嚴格遵守指定的 JSON 格式，不得新增任何額外欄位。`,
     `
-根據以下場景概念，設計規則系統：
+根據以下場景概念，設計主要規則系統：
 
-${JSON.stringify(concept, null, 2)}
+${conceptStr}
 
 設計要求：
 1. 6-8條主要規則，每條規則對應一個可觸發的事件
-2. 至少2個地點有自己的額外規則（類似「304號房附加說明」）
-3. 至少3份可被玩家找到的文件（官方的、前任使用者留下的、員工內部的）
-4. 至少2組規則矛盾（文件A說這樣，文件B說相反的）
-5. 其中至少一條規則是「陷阱」——看似保護玩家，實際導向危險
+2. 至少2個地點 ID 有自己的額外規則（類似「某病房附加說明」）
+3. 至少2組規則矛盾（主規則說一件事，某文件說相反的）
+4. 其中至少一條規則是「陷阱」——看似保護玩家，實際導向危險
 
-規則設計原則：
-- "本設施目前沒有地下室" 比 "本設施沒有地下室" 更恐怖（"目前"二字）
-- "若燈光二十分鐘內未能恢復，本須知已不再適用於你" 比 "危險，請逃跑" 更恐怖
-- 規則應該暗示它知道會發生什麼，但從不解釋
+每條 mainRule 必須有三個文字版本：
+- text：原始版（公告板上的第一天）
+- mutatedText：輕微腐化（加「目前」「暫時」或一個讓人不安的詞）
+- corruptedText：深度腐化（自相矛盾，或暗示它知道你已經違反了）
 
-輸出 JSON（用 \`\`\`json 包裹）。
+範例格式（嚴格遵守，只有這些欄位）：
+\`\`\`json
+{
+  "mainRules": [
+    {
+      "number": 1,
+      "text": "凌晨後請勿打開窗戶。",
+      "mutatedText": "凌晨後請勿打開窗戶。若窗戶已開，請假裝它沒有開。",
+      "corruptedText": "凌晨後請勿打開窗戶。若你正在閱讀本條，表示窗戶已開。",
+      "triggerDescription": "玩家在深夜病房內選擇打開窗戶時觸發"
+    }
+  ],
+  "locationRules": {
+    "ward_b": [
+      { "number": 1, "text": "B 病區的燈不會完全熄滅。若燈熄滅，請立即離開。" }
+    ]
+  },
+  "contradictions": [
+    {
+      "ruleA": "主規則第2條：若廣播呼叫你的名字，請立即回應。",
+      "ruleB": "員工備忘錄：若廣播呼叫住院者姓名為訓練測試，患者不應回應。",
+      "scenario": "玩家在深夜聽見廣播呼叫自己姓名時，需選擇回應或忽略"
+    }
+  ]
+}
+\`\`\`
+
+請用以上完全相同的欄位名稱輸出，不得增減欄位。規則文字用繁體中文。
 `,
-    `## 場景概念\n${JSON.stringify(concept, null, 2)}`,
-    4096
+    `## 場景概念\n${conceptStr}`,
+    8000
   );
 
-  return extractJSON<RulesOutput>(result);
+  // Agent 2b: 可發現的文件（拿到 2a 完整輸出）
+  const resultB = await callAgent(
+    client,
+    "Agent 2b 規則設計師（文件）",
+    `你是一位規則怪談文件設計師。你設計玩家在場景中可以找到的文件。
+這些文件彼此矛盾，讓玩家無法確定哪份是真的。
+重要：你的輸出必須嚴格遵守指定的 JSON 格式，不得新增任何額外欄位。`,
+    `
+根據以下場景概念和已設計的規則，設計3-4份可被玩家發現的文件：
+
+場景概念：
+${conceptStr}
+
+已設計的主要規則（文件內容必須與其中某些規則矛盾）：
+${resultA}
+
+設計要求：
+1. 至少一份是官方文件（語氣正式，但第X條內容是陷阱，引導玩家走向危險）
+2. 至少一份是前任使用者/患者留下的（直接寫明「第X條是假的，不要相信」）
+3. 至少一份是員工內部文件（揭露管理層隱瞞的事，包含「按標準程序處理」卻不說是什麼程序）
+4. 文件之間必須互相矛盾（官方文件說往大廳，員工文件說大廳夜間不安全）
+
+範例格式（嚴格遵守，只有這些欄位）：
+\`\`\`json
+{
+  "foundDocuments": [
+    {
+      "id": "doc_official_notice",
+      "title": "夜間患者注意事項",
+      "source": "official",
+      "lines": [
+        "1. 若感到不適，請按床頭呼叫鈴。",
+        "2. 夜間廣播為正常院方通知，請配合。",
+        "3. 若有工作人員引導您前往特定區域，請勿拒絕。"
+      ],
+      "findLocation": "reception",
+      "findAction": "查看入院資料夾"
+    },
+    {
+      "id": "doc_patient_note",
+      "title": "（手寫便條，紙張發黃）",
+      "source": "previous_occupant",
+      "lines": [
+        "給下一個住這間的人：",
+        "第三條是假的。不要跟著工作人員走。",
+        "我跟著走了。"
+      ],
+      "findLocation": "ward_b_room",
+      "findAction": "掀開床墊查看"
+    }
+  ]
+}
+\`\`\`
+
+請用以上完全相同的欄位名稱輸出，source 只能是 official / previous_occupant / staff / unknown 之一。
+`,
+    `## 場景概念\n${conceptStr}`,
+    8000
+  );
+
+  const core = extractJSON<RulesCore>(resultA);
+  const docs = extractJSON<RulesDocs>(resultB);
+  return { ...core, ...docs };
+}
+
+// ─── Agent 2c: 一致性協調師 ──────────────────────────────────────────────────
+
+export type DesignContract = {
+  // 每條規則必須連結到哪個事件 ID
+  ruleEventMap: {
+    ruleNumber: number;
+    mustTriggerEventId: string;     // 這條規則要對應的事件 ID
+    exposedByDocId?: string;        // 哪份文件會揭露/矛盾這條規則
+    isTrap: boolean;
+  }[];
+  // 每個結局的必要條件路徑
+  endingPaths: {
+    endingId: string;
+    title: string;
+    requiredFlags: string[];        // 玩家必須設定哪些 flag
+    requiredEvents: string[];       // 必須觸發哪些事件 ID
+    blockedBy?: string[];           // 什麼條件會阻止這個結局
+  }[];
+  // 矛盾規則的事件化：玩家何時面對這個矛盾
+  contradictionEvents: {
+    contradictionIndex: number;
+    eventId: string;                // 哪個事件讓玩家面對這個矛盾
+    choiceConsequence: string;      // 選不同邊的大致後果
+  }[];
+  // 文件的觸發點：玩家如何得知對話中可以引用文件
+  docUsageHints: {
+    docId: string;
+    relevantDialogueTopics: string[];  // 找到這份文件後，對話中應該開放哪些新選項
+  }[];
+};
+
+async function runConsistencyCoordinator(
+  client: Anthropic,
+  concept: ConceptOutput,
+  rules: RulesOutput
+): Promise<DesignContract> {
+  const result = await callAgent(
+    client,
+    "Agent 2c 一致性協調師",
+    `你是一位遊戲設計協調師。你的任務是建立一份「設計合約」——
+這份合約是所有後續 agent（事件設計師、對話作家、結局設計師）的強制約束。
+合約必須讓每條規則都有具體的觸發事件，每份文件都有實際的對話用途，每個結局都有明確的達成路徑。`,
+    `
+根據以下場景和規則，建立設計合約：
+
+場景：${concept.name}
+隱藏真相：${concept.hiddenTruth}
+
+規則摘要：
+主規則數量：${rules.mainRules.length} 條
+文件數量：${rules.foundDocuments.length} 份
+矛盾組數：${rules.contradictions.length} 組
+
+規則列表：
+${rules.mainRules.map((r) => `  第${r.number}條：${r.text}`).join("\n")}
+
+文件列表：
+${rules.foundDocuments.map((d) => `  ${d.id}：${d.title} (${d.source})`).join("\n")}
+
+矛盾列表：
+${rules.contradictions.map((c, i) => `  矛盾${i + 1}：${c.scenario}`).join("\n")}
+
+任務：設計一份讓上述所有元素都「連通」的合約。
+
+規則：
+- 每條主規則必須對應一個具體的遊戲事件 ID（你來命名，後續的事件工程師必須建立這個 ID）
+- 每個結局必須有具體的達成路徑（需要觸發哪些事件、找到哪些文件）
+- 每份文件必須在至少一個對話節點中有實際用途
+- 至少2個矛盾規則必須有事件讓玩家面對選擇
+
+嚴格規則：
+- 只能有 ruleEventMap、endingPaths、contradictionEvents、docUsageHints 這四個頂層 key
+- 每個物件只能有範例中出現的欄位，禁止增加 note、description、reason 等額外欄位
+- 保持簡潔，每個字串不超過50個中文字
+- ruleEventMap 條目數 = 主規則數；endingPaths 條目數 = 5-7
+
+範例格式（嚴格遵守，禁止增加任何額外欄位）：
+\`\`\`json
+{
+  "ruleEventMap": [
+    {
+      "ruleNumber": 1,
+      "mustTriggerEventId": "event_window_night",
+      "exposedByDocId": "doc_patient_note",
+      "isTrap": false
+    }
+  ],
+  "endingPaths": [
+    {
+      "endingId": "ending_compliant",
+      "title": "模範患者",
+      "requiredFlags": ["followedAllRules"],
+      "requiredEvents": ["event_morning_assessment"],
+      "blockedBy": ["enteredRestrictedZone"]
+    }
+  ],
+  "contradictionEvents": [
+    {
+      "contradictionIndex": 0,
+      "eventId": "event_broadcast_name",
+      "choiceConsequence": "回應→觸發接觸事件；忽略→suspicious上升"
+    }
+  ],
+  "docUsageHints": [
+    {
+      "docId": "doc_staff_memo",
+      "relevantDialogueTopics": ["夜間廣播", "限制區域"]
+    }
+  ]
+}
+\`\`\`
+`,
+    `## 完整規則輸出\n${JSON.stringify(rules, null, 2)}`,
+    8000
+  );
+
+  return extractJSON<DesignContract>(result);
 }
 
 // ─── Agent 3: 事件工程師 ─────────────────────────────────────────────────────
@@ -388,47 +613,94 @@ type EventsOutput = {
   }[];
 };
 
+const EVENT_SYSTEM_PROMPT = `你是一位互動敘事遊戲事件設計師，專門設計規則怪談風格的事件。
+每個事件都應該讓玩家面對一個選擇，而這個選擇沒有明顯的「正確答案」。
+恐怖來自選擇的後果，而不是jump scare。
+重要：description 控制在 80 字以內，resultText 控制在 60 字以內，保持精簡。`;
+
+const EFFECTS_REF = `效果類型：
+- { type: "sanity", value: -15 }
+- { type: "anomaly", value: 2 }
+- { type: "world", key: "hotelRealityStability", value: -20 }
+- { type: "flag", key: "flagName", value: true }
+- { type: "sheet", value: "doc_id" }
+- { type: "ending", value: "endingId" }`;
+
+// Agent 3 splits into 3a (rule-trigger events) and 3b (contradiction + ending events)
 async function runEventEngineer(
   client: Anthropic,
   concept: ConceptOutput,
-  rules: RulesOutput
+  rules: RulesOutput,
+  contract: DesignContract
 ): Promise<EventsOutput> {
-  const result = await callAgent(
+  const locations = concept.locations.map((l) => l.id).join(", ");
+  const ruleMapStr = contract.ruleEventMap
+    .map((r) => `- ${r.mustTriggerEventId}（第${r.ruleNumber}條${r.isTrap ? "，陷阱" : ""}）`)
+    .join("\n");
+  const halfLen = Math.ceil(contract.ruleEventMap.length / 2);
+  const ruleMapA = contract.ruleEventMap.slice(0, halfLen);
+  const ruleMapB = contract.ruleEventMap.slice(halfLen);
+
+  const baseContext = `## 規則摘要\n${rules.mainRules.map((r) => `第${r.number}條：${r.text}`).join("\n")}\n\n## 設計合約\n${JSON.stringify(contract, null, 2)}`;
+
+  // Agent 3a: opening event + first half of rule-trigger events
+  const resultA = await callAgent(
     client,
-    "Agent 3 事件工程師",
-    `你是一位互動敘事遊戲事件設計師，專門設計規則怪談風格的事件。
-每個事件都應該讓玩家面對一個選擇，而這個選擇沒有明顯的「正確答案」。
-恐怖來自選擇的後果，而不是jump scare。`,
+    "Agent 3a 事件工程師（前半）",
+    EVENT_SYSTEM_PROMPT,
     `
-根據場景概念和規則系統，設計10-15個遊戲事件：
+設計以下事件（共 ${halfLen + 1} 個）：
 
-場景：${concept.name}
-地點：${concept.locations.map((l) => l.id).join(", ")}
+場景：${concept.name}，地點：${locations}
 
-設計要求：
-1. 每條主要規則至少對應一個事件（讓規則變得「真實」）
-2. 事件觸發條件應該基於：地點、時間、玩家狀態、世界狀態
-3. 每個事件有3-4個選項，選項之間的後果要有意義差異
-4. 至少3個事件涉及規則矛盾（玩家需要選擇相信哪份文件）
-5. 包含一個「入住/進入」事件（遊戲開場）
-6. 包含一個「清晨/結束條件」事件
-7. 深夜事件（凌晨後）比白天/傍晚事件更奇怪
+1. 開場事件（once: true）：玩家進入場景，收到規則說明
+2. 以下合約規定事件（必須用完全相同的 ID）：
+${ruleMapA.map((r) => `   - ${r.mustTriggerEventId}`).join("\n")}
 
-效果類型參考：
-- { type: "sanity", value: -15 }  → 理智降低
-- { type: "anomaly", value: 2 }   → 異常關注度增加
-- { type: "world", key: "hotelRealityStability", value: -20 }
-- { type: "flag", key: "flagName", value: true }
-- { type: "sheet", value: "document_id" }  → 玩家找到文件
-- { type: "ending", value: "endingId" }   → 觸發結局
+每個事件 3-4 個選項。description ≤ 80字。resultText ≤ 60字。
+${EFFECTS_REF}
 
-輸出 JSON（用 \`\`\`json 包裹）。
+輸出 JSON（\`\`\`json 包裹）：{ "events": [...] }
 `,
-    `## 場景概念\n${JSON.stringify(concept, null, 2)}\n\n## 規則系統\n${JSON.stringify(rules, null, 2)}`,
-    6000
+    baseContext,
+    8000
   );
 
-  return extractJSON<EventsOutput>(result);
+  // Agent 3b: second half of rules + contradiction events + morning
+  const contradictionStr = contract.contradictionEvents
+    .map((c) => `- ${c.eventId}：${c.choiceConsequence}`)
+    .join("\n");
+
+  const resultB = await callAgent(
+    client,
+    "Agent 3b 事件工程師（後半）",
+    EVENT_SYSTEM_PROMPT,
+    `
+設計以下事件（共 ${ruleMapB.length + contract.contradictionEvents.length + 1} 個）：
+
+場景：${concept.name}，地點：${locations}
+
+1. 以下合約規定事件（必須用完全相同的 ID）：
+${ruleMapB.map((r) => `   - ${r.mustTriggerEventId}`).join("\n")}
+
+2. 矛盾規則事件（讓玩家選擇相信哪份文件）：
+${contradictionStr}
+
+3. 清晨/離開條件事件（once: true，讓玩家達成各個結局）：
+${contract.endingPaths.map((e) => `   結局 ${e.endingId} 需要：${e.requiredEvents.join(", ")}`).join("\n")}
+
+每個事件 3-4 個選項。description ≤ 80字。resultText ≤ 60字。
+${EFFECTS_REF}
+
+輸出 JSON（\`\`\`json 包裹）：{ "events": [...] }
+`,
+    baseContext,
+    8000
+  );
+
+  const eventsA = extractJSON<EventsOutput>(resultA);
+  const eventsB = extractJSON<EventsOutput>(resultB);
+  return { events: [...eventsA.events, ...eventsB.events] };
 }
 
 // ─── Agent 4: 對話作家 ───────────────────────────────────────────────────────
@@ -456,48 +728,80 @@ type DialoguesOutput = {
   }[];
 };
 
+// Agent 4 runs once per NPC in parallel to avoid hitting token limits
+async function runDialogueWriterForNpc(
+  client: Anthropic,
+  npc: ConceptOutput["npcs"][0],
+  concept: ConceptOutput,
+  rules: RulesOutput,
+  contract: DesignContract
+): Promise<DialoguesOutput["dialogues"][0]> {
+  const myHints = contract.docUsageHints
+    .map((d) => `- 找到 ${d.docId} 後可問：${d.relevantDialogueTopics.join("、")}`)
+    .join("\n");
+
+  const result = await callAgent(
+    client,
+    `Agent 4 對話作家（${npc.name}）`,
+    `你是一位互動敘事遊戲對話設計師，專門設計恐怖規則怪談風格的NPC對話。
+NPC說的話永遠帶有一點不對勁——太過官方、太過標準、或者知道一點不該知道的事情。
+每次追問都讓事情更奇怪而不是更清楚。
+重要：保持每個 npcText 在 60 字以內，choices label 在 20 字以內。`,
+    `
+為以下單一 NPC 設計多輪對話樹：
+
+場景：${concept.name}
+NPC：${JSON.stringify(npc, null, 2)}
+
+【強制要求 — 設計合約】
+${myHints}
+
+對話設計要求：
+1. 10-12 個對話節點（不要超過，保持精簡）
+2. 對話根據玩家狀態給出不同回應：
+   - 普通狀態：官方標準回應，帶一點破綻
+   - 找到特定文件後：開放質問選項，NPC 有破防反應
+   - sanity 低時：NPC 說話更奇怪
+3. 必要節點：greet → main_menu → 至少4個主題節點
+4. 必要對話路徑：
+   - 詢問其他患者/使用者 → 隱私條款回應
+   - 詢問某條規則 → 標準回應帶破綻
+   - 詢問限制區域 → 閃爍其詞
+   - 文件質問 → 破防（condition: "player.foundSheets.includes('doc_id')"）
+
+欄位說明（禁止增加其他欄位）：
+- npcText: string（NPC 說的話，60字以內）
+- choices: 陣列，每個 choice 有 id、label、condition?、setMemory?、next
+
+輸出單一對話物件 JSON（用 \`\`\`json 包裹）：
+{
+  "id": "${npc.id}_dialogue",
+  "npcName": "${npc.name}",
+  "location": "npc所在地點id",
+  "startScene": "greet",
+  "scenes": { ... }
+}
+`,
+    `## 規則摘要\n${rules.mainRules.map((r) => `第${r.number}條：${r.text}`).join("\n")}\n\n## 設計合約\n${JSON.stringify(contract, null, 2)}`,
+    8000
+  );
+
+  return extractJSON<DialoguesOutput["dialogues"][0]>(result);
+}
+
 async function runDialogueWriter(
   client: Anthropic,
   concept: ConceptOutput,
-  rules: RulesOutput
+  rules: RulesOutput,
+  contract: DesignContract
 ): Promise<DialoguesOutput> {
-  const result = await callAgent(
-    client,
-    "Agent 4 對話作家",
-    `你是一位互動敘事遊戲對話設計師，專門設計恐怖規則怪談風格的NPC對話。
-NPC說的話永遠帶有一點不對勁——太過官方、太過標準、或者知道一點不該知道的事情。
-對話應該多輪，讓玩家能夠追問，但每次追問都讓事情更奇怪而不是更清楚。`,
-    `
-為以下NPC設計多輪對話樹：
-
-場景：${concept.name}
-NPC列表：${JSON.stringify(concept.npcs, null, 2)}
-
-設計要求：
-1. 每個NPC一個完整的對話樹（15-25個對話節點）
-2. 對話根據玩家狀態（sanity、suspicion、anomalyAttention、foundSheets）給出不同回應
-3. 關鍵對話路徑：
-   - 詢問其他使用者/訪客（觸發隱私條款）
-   - 詢問關於規則（標準回應，但帶有破綻）
-   - 詢問關於某個禁區或異常（NPC閃爍其詞）
-   - 如果玩家找到了內部文件，可以用文件內容質問NPC
-4. 玩家找到內部備忘錄後，對話中可以直接引用條款讓NPC破防
-5. 對話節點命名規範：greet → main_menu → [topic]_[detail]
-
-對話節點結構：
-- npcText: NPC說的話（可以是字串或根據狀態的條件描述）
-- choices: 玩家選項列表
-  - condition: 可選（如 "player.foundSheets.includes('staff_memo')"）
-  - setMemory: 在此對話記憶中記錄某些事（如 { askedAboutBasement: true }）
-  - next: 下一個節點ID或 null（結束對話）
-
-輸出 JSON（用 \`\`\`json 包裹）。
-`,
-    `## 場景概念\n${JSON.stringify(concept, null, 2)}\n\n## 規則系統（NPC應該知道這些）\n${JSON.stringify(rules, null, 2)}`,
-    6000
+  // Run one agent per NPC in parallel
+  const dialogueList = await Promise.all(
+    concept.npcs.map((npc) =>
+      runDialogueWriterForNpc(client, npc, concept, rules, contract)
+    )
   );
-
-  return extractJSON<DialoguesOutput>(result);
+  return { dialogues: dialogueList };
 }
 
 // ─── Agent 5: 結局設計師 ─────────────────────────────────────────────────────
@@ -517,7 +821,8 @@ async function runEndingsDesigner(
   client: Anthropic,
   concept: ConceptOutput,
   rules: RulesOutput,
-  events: EventsOutput
+  events: EventsOutput,
+  contract: DesignContract
 ): Promise<EndingsOutput> {
   const result = await callAgent(
     client,
@@ -527,35 +832,42 @@ async function runEndingsDesigner(
 而且這個揭示總是帶著一點令人不安的後勁。
 結局文字應該簡潔、有餘韻、留下一個未解的問題。`,
     `
-根據以下場景設計5-7個結局：
+根據以下場景和設計合約，設計5-7個結局：
 
 場景：${concept.name}
 隱藏真相：${concept.hiddenTruth}
 
-設計要求：
-1. 至少一個「表面上成功離開，但細節讓人不安」的結局（類似「平安退房但收據日期是明天」）
-2. 至少一個「玩家選擇相信錯誤的規則」導致的結局
-3. 至少一個「遵守了所有規則，但規則本身就是陷阱」的結局
-4. 一個隱藏結局（需要發現特定線索組合）
-5. 結局文字200-400字，簡潔有力，最後一句話帶有後勁
-6. 結局的觸發條件基於：玩家 flag、sanity 值、found documents、worldState
+【強制要求 — 設計合約】
+以下結局路徑你必須實現（ID 必須完全一致）：
+${contract.endingPaths.map((e) => `
+- 結局 ID：${e.endingId}（${e.title}）
+  需要觸發事件：${e.requiredEvents.join(", ")}
+  需要玩家 flag：${e.requiredFlags.join(", ")}
+  ${e.blockedBy ? `阻止條件：${e.blockedBy.join(", ")}` : ""}
+`).join("")}
 
-結局觸發條件描述範例：
-- "player.enteredBasement"
-- "player.sanity <= 20 && player.hasReadExtraRule"
-- "world.staffMode === 'hostile' && player.suspicion > 80"
-- "player.timeMinutes >= START + MORNING_7AM && !player.ateEggs"
+設計要求：
+1. 每個結局 ID 必須與合約一致
+2. 至少一個「表面成功，細節不安」的結局
+3. 至少一個「遵守了所有規則，但規則本身是陷阱」的結局
+4. 一個隱藏結局（需要找到特定文件組合）
+5. 結局文字200-400字，最後一句帶後勁，不解釋謎底
+
+觸發條件寫法範例：
+- "player.enteredRestrictedZone"
+- "player.sanity <= 20 && world.anomalyAttention >= 5"
+- "player.foundSheets.includes('doc_staff_memo') && player.suspicion > 80"
 
 輸出 JSON（用 \`\`\`json 包裹）。
 `,
-    `## 場景概念\n${JSON.stringify(concept, null, 2)}\n\n## 規則系統\n${JSON.stringify(rules, null, 2)}\n\n## 重要事件\n${JSON.stringify(events.events.slice(0, 5), null, 2)}`,
-    3000
+    `## 設計合約\n${JSON.stringify(contract, null, 2)}\n\n## 規則系統摘要\n${JSON.stringify({ mainRules: rules.mainRules.map((r) => ({ number: r.number, text: r.text })), contradictions: rules.contradictions }, null, 2)}\n\n## 已設計事件 ID\n${events.events.map((e) => e.id).join(", ")}`,
+    8000
   );
 
   return extractJSON<EndingsOutput>(result);
 }
 
-// ─── Agent 6: 程式碼生成師 ──────────────────────────────────────────────────
+// ─── Agent 6: 程式碼生成師（拆成 3 個並行 call）────────────────────────────
 
 type CodeOutput = {
   indexTs: string;
@@ -567,6 +879,17 @@ type CodeOutput = {
   locationActionsTs: string;
 };
 
+const CODE_GEN_SYSTEM = `你是一位 TypeScript 遊戲開發工程師。
+將設計 JSON 轉換為完整的 TypeScript 程式碼。
+型別規則：
+- GameEvent.trigger: (player: PlayerState, world: WorldState) => boolean
+- GameEvent.choices[].condition?: (player: PlayerState, world: WorldState) => boolean
+- GameEnding.condition: (player: PlayerState, world: WorldState) => boolean
+- LocationAction.resultText: string | ((player: PlayerState, world: WorldState) => string)
+時間比較必須用絕對分鐘數（開始時間 + offset）。
+所有敘事文字用繁體中文。程式碼識別符用英文。
+只輸出純 TypeScript，不要解釋。`;
+
 async function runCodeGenerator(
   client: Anthropic,
   allOutputs: {
@@ -577,44 +900,95 @@ async function runCodeGenerator(
     endings: EndingsOutput;
   }
 ): Promise<CodeOutput> {
-  const result = await callAgent(
-    client,
-    "Agent 6 程式碼生成師",
-    `你是一位 TypeScript 遊戲開發工程師。
-你的任務是將敘事設計 JSON 轉換為完整的 TypeScript 程式碼，
-代碼必須嚴格符合遊戲的現有型別系統，不能引入不存在的型別或方法。
+  const { concept, rules, events, dialogues, endings } = allOutputs;
+  const startTime = concept.startTime;
 
-輸出一個包含多個 TypeScript 檔案內容的 JSON 物件。
-每個字串值是一個完整的 TypeScript 檔案內容。`,
-    `
-根據以下設計資料，生成完整的 TypeScript 代碼：
+  // 6a: events.ts（最大的檔案，單獨跑）
+  // 6b: rules.ts + ruleSheets.ts + endings.ts
+  // 6c: dialogues/index.ts + locationActions.ts + index.ts
+  // One file per agent call, all parallel — prevents any single call from truncating
+  const [eventsR, rulesR, sheetsR, endingsR, dialoguesR, locationsR, indexR] =
+    await Promise.all([
+      // events.ts split into two halves to stay under token limit
+      (async () => {
+        const half = Math.ceil(events.events.length / 2);
+        const eventsA = events.events.slice(0, half);
+        const eventsB = events.events.slice(half);
+        const [rA, rB] = await Promise.all([
+          callAgent(client, "Agent 6 events-a", CODE_GEN_SYSTEM,
+            `生成第一批 GameEvent 物件的 TypeScript 程式碼。\n開始時間：${startTime} 分鐘。\n事件資料：${JSON.stringify(eventsA, null, 2)}\n\n輸出 JSON（\`\`\`json）：{ "items": "逗號分隔的 GameEvent 物件字面量（不含 [ ] 和 export）" }`,
+            "", 8000),
+          callAgent(client, "Agent 6 events-b", CODE_GEN_SYSTEM,
+            `生成第二批 GameEvent 物件的 TypeScript 程式碼。\n開始時間：${startTime} 分鐘。\n事件資料：${JSON.stringify(eventsB, null, 2)}\n\n輸出 JSON（\`\`\`json）：{ "items": "逗號分隔的 GameEvent 物件字面量（不含 [ ] 和 export）" }`,
+            "", 8000),
+        ]);
+        const itemsA = extractJSON<{ items: string }>(rA).items;
+        const itemsB = extractJSON<{ items: string }>(rB).items;
+        const eventsTs = [
+          `import type { GameEvent, PlayerState, WorldState } from "@/types/game";`,
+          ``,
+          `const START = ${startTime};`,
+          ``,
+          `export const SCENARIO_EVENTS: GameEvent[] = [`,
+          itemsA,
+          `,`,
+          itemsB,
+          `];`,
+        ].join("\n");
+        return JSON.stringify({ eventsTs });
+      })(),
 
-${JSON.stringify(allOutputs, null, 2)}
+      callAgent(client, "Agent 6 rules.ts", CODE_GEN_SYSTEM,
+        `生成 rules.ts，export function getRules(player: PlayerState, world: WorldState): RuleEntry[]。\n規則（含三版本）：${JSON.stringify(rules.mainRules, null, 2)}\n地點規則：${JSON.stringify(rules.locationRules, null, 2)}\n\n輸出 JSON：{ "rulesTs": "完整TS內容" }`,
+        "", 8000),
 
-生成要求：
-1. events 的 trigger 條件必須是合法的函數 body
-2. 時間比較：遊戲開始時間為 ${allOutputs.concept.startTime} 分鐘
-3. 每個 GameEvent 的 trigger 是 \`(player: PlayerState, world: WorldState) => boolean\`
-4. LocationAction 的 resultText 如果根據狀態變化，用函數形式 \`(player, world) => string\`
-5. condition 字串轉為箭頭函數
-6. 所有字串用繁體中文（程式碼識別符可以用英文）
+      callAgent(client, "Agent 6 ruleSheets.ts", CODE_GEN_SYSTEM,
+        `生成 ruleSheets.ts，export const SCENARIO_RULE_SHEETS: Record<string, RuleSheet>。\n文件資料：${JSON.stringify(rules.foundDocuments, null, 2)}\n\n輸出 JSON：{ "ruleSheetsTs": "完整TS內容" }`,
+        "", 8000),
 
-輸出 JSON（用 \`\`\`json 包裹），包含以下鍵：
-{
-  "indexTs": "// index.ts 內容，export所有東西",
-  "eventsTs": "// events.ts 完整內容",
-  "rulesTs": "// rules.ts 完整內容",
-  "ruleSheetsTs": "// ruleSheets.ts 完整內容",
-  "endingsTs": "// endings.ts 完整內容",
-  "dialoguesTs": "// dialogues/index.ts 完整內容",
-  "locationActionsTs": "// locationActions.ts 完整內容（地點行動資料）"
-}
-`,
-    "",
-    8192
-  );
+      callAgent(client, "Agent 6 endings.ts", CODE_GEN_SYSTEM,
+        `生成 endings.ts，export function checkScenarioEnding(player: PlayerState, world: WorldState, forcedId?: string): GameEnding | null。\n結局資料：${JSON.stringify(endings, null, 2)}\n\n輸出 JSON：{ "endingsTs": "完整TS內容" }`,
+        "", 8000),
 
-  return extractJSON<CodeOutput>(result);
+      callAgent(client, "Agent 6 dialogues.ts", CODE_GEN_SYSTEM,
+        `生成 dialogues/index.ts，export const SCENARIO_DIALOGUES: Record<string, Dialogue>。\n對話資料：${JSON.stringify(dialogues, null, 2)}\n\n輸出 JSON：{ "dialoguesTs": "完整TS內容" }`,
+        "", 8000),
+
+      callAgent(client, "Agent 6 locationActions.ts", CODE_GEN_SYSTEM,
+        `生成 locationActions.ts，export const SCENARIO_LOCATIONS: Record<string, LocationData>。\n場景：${concept.name}\n地點清單：${JSON.stringify(concept.locations, null, 2)}\n每個地點設計 2-3 個行動（resultText ≤ 60字，用繁體中文）。\n\n輸出 JSON：{ "locationActionsTs": "完整TS內容" }`,
+        "", 8000),
+
+      callAgent(client, "Agent 6 index.ts", CODE_GEN_SYSTEM,
+        `生成 index.ts，import 並 export 一個 ScenarioPack 物件。
+pack 資訊：
+- id: "${concept.slug ?? concept.name}"
+- name: "${concept.name}"
+- nameEn: "${concept.nameEn ?? ""}"
+- tagline: "${concept.tagline}"
+- description: "${concept.setting}"
+- initialPlayer: 開始時間 ${startTime} 分鐘，從 ${concept.locations[0]?.id} 開始，sanity/suspicion 100/0
+
+imports 來源：
+- SCENARIO_EVENTS from "./events"
+- getRules from "./rules"
+- SCENARIO_RULE_SHEETS from "./ruleSheets"
+- checkScenarioEnding from "./endings"
+- SCENARIO_DIALOGUES from "./dialogues"
+- SCENARIO_LOCATIONS from "./locationActions"
+
+輸出 JSON：{ "indexTs": "完整TS內容" }`,
+        "", 8000),
+    ]);
+
+  return {
+    eventsTs: JSON.parse(eventsR as string).eventsTs,
+    rulesTs: extractJSON<{ rulesTs: string }>(rulesR).rulesTs,
+    ruleSheetsTs: extractJSON<{ ruleSheetsTs: string }>(sheetsR).ruleSheetsTs,
+    endingsTs: extractJSON<{ endingsTs: string }>(endingsR).endingsTs,
+    dialoguesTs: extractJSON<{ dialoguesTs: string }>(dialoguesR).dialoguesTs,
+    locationActionsTs: extractJSON<{ locationActionsTs: string }>(locationsR).locationActionsTs,
+    indexTs: extractJSON<{ indexTs: string }>(indexR).indexTs,
+  };
 }
 
 // ─── Agent 7: 驗證師 ─────────────────────────────────────────────────────────
@@ -629,30 +1003,56 @@ type ValidationOutput = {
 
 async function runValidator(
   client: Anthropic,
-  allOutputs: object
+  allOutputs: {
+    concept: ConceptOutput;
+    rules: RulesOutput;
+    contract: DesignContract;
+    events: EventsOutput;
+    endings: EndingsOutput;
+  }
 ): Promise<ValidationOutput> {
+  // Only pass IDs and structure, not full text — keeps input small
+  const summary = {
+    ruleNumbers: allOutputs.rules.mainRules.map((r) => r.number),
+    eventIds: allOutputs.events.events.map((e) => e.id),
+    endingIds: allOutputs.endings.endings.map((e) => e.id),
+    contractRuleEventMap: allOutputs.contract.ruleEventMap,
+    contractEndingPaths: allOutputs.contract.endingPaths.map((p) => ({
+      endingId: p.endingId,
+      requiredEvents: p.requiredEvents,
+    })),
+    contradictionEventIds: allOutputs.contract.contradictionEvents.map((c) => c.eventId),
+    docIds: allOutputs.rules.foundDocuments.map((d) => d.id),
+  };
+
   const result = await callAgent(
     client,
     "Agent 7 驗證師",
-    `你是一位遊戲設計驗證師，專門檢查規則怪談遊戲的一致性。
-你的任務是找出設計中的問題：規則沒有被觸發、矛盾沒有出口、結局條件不可達等。`,
+    `你是一位遊戲設計驗證師。輸出必須嚴格遵守指定 JSON 格式，禁止增加額外欄位。每條 issue/warning 限 40 字。`,
     `
-驗證以下遊戲設計的一致性：
+驗證設計一致性：
 
-${JSON.stringify(allOutputs, null, 2)}
+${JSON.stringify(summary, null, 2)}
 
-檢查項目：
-1. 每條主要規則是否有對應的事件讓它「真實」？
-2. 規則矛盾是否有事件讓玩家面對這個矛盾？
-3. 每個結局是否可達（觸發條件是否合理）？
-4. 是否有孤立的地點（沒有事件也沒有行動）？
-5. 對話樹是否有死路（next: null 的 choice 前路是否合理）？
-6. 陷阱規則是否有對應的「真相揭露」時刻？
+檢查：
+1. contract.ruleEventMap 中的每個 mustTriggerEventId 是否都在 eventIds 中？
+2. contract.endingPaths 中的每個 requiredEvents 是否都在 eventIds 中？
+3. contradictionEventIds 是否都在 eventIds 中？
+4. contract.endingPaths 的 endingId 是否都在 endingIds 中？
 
-輸出 JSON（用 \`\`\`json 包裹）。
+輸出 JSON（嚴格遵守此格式，禁止增加其他欄位）：
+\`\`\`json
+{
+  "valid": true,
+  "issues": ["嚴重問題（缺少必要事件 ID 等）"],
+  "warnings": ["輕微問題"],
+  "suggestions": ["可選改進"],
+  "rulesCoverage": { "1": true, "2": false }
+}
+\`\`\`
 `,
     "",
-    2000
+    3000
   );
 
   return extractJSON<ValidationOutput>(result);
@@ -742,7 +1142,7 @@ async function main() {
   console.log(`   主題：${theme}`);
   console.log(`   關鍵字：${keywords}`);
   console.log(`   輸出：lib/scenarios/${finalSlug}/`);
-  console.log(`\n   Pipeline：概念師 → 規則師 → [事件師 ‖ 對話師] → 結局師 → 程式碼師 → 驗證師\n`);
+  console.log(`\n   Pipeline：概念師 → 規則師(2a+2b) → 協調師(2c) → [事件師 ‖ 對話師] → 結局師 → 程式碼師 → 驗證師\n`);
 
   // Agent 1: Conceiver
   let concept = (await loadCheckpoint(finalSlug, "concept")) as ConceptOutput | null;
@@ -751,22 +1151,29 @@ async function main() {
     await saveCheckpoint(finalSlug, "concept", concept);
   }
 
-  // Agent 2: Rules Architect
+  // Agent 2a+2b: Rules Architect (split to avoid token limits)
   let rules = (await loadCheckpoint(finalSlug, "rules")) as RulesOutput | null;
   if (!rules) {
     rules = await runRulesArchitect(client, concept);
     await saveCheckpoint(finalSlug, "rules", rules);
   }
 
-  // Agent 3 + 4: Parallel (Events Engineer + Dialogue Writer)
+  // Agent 2c: Consistency Coordinator → design contract
+  let contract = (await loadCheckpoint(finalSlug, "contract")) as DesignContract | null;
+  if (!contract) {
+    contract = await runConsistencyCoordinator(client, concept, rules);
+    await saveCheckpoint(finalSlug, "contract", contract);
+  }
+
+  // Agent 3 + 4: Parallel — both receive the design contract
   let events = (await loadCheckpoint(finalSlug, "events")) as EventsOutput | null;
   let dialogues = (await loadCheckpoint(finalSlug, "dialogues")) as DialoguesOutput | null;
 
   if (!events || !dialogues) {
-    log("Agent 3+4", "事件工程師 + 對話作家 並行執行...");
+    log("Agent 3+4", "事件工程師 + 對話作家 並行執行（依設計合約）...");
     const [eventsResult, dialoguesResult] = await Promise.all([
-      events ?? runEventEngineer(client, concept, rules),
-      dialogues ?? runDialogueWriter(client, concept, rules),
+      events ?? runEventEngineer(client, concept, rules, contract),
+      dialogues ?? runDialogueWriter(client, concept, rules, contract),
     ]);
     events = eventsResult;
     dialogues = dialoguesResult;
@@ -774,10 +1181,10 @@ async function main() {
     await saveCheckpoint(finalSlug, "dialogues", dialogues);
   }
 
-  // Agent 5: Endings Designer
+  // Agent 5: Endings Designer — receives the design contract
   let endings = (await loadCheckpoint(finalSlug, "endings")) as EndingsOutput | null;
   if (!endings) {
-    endings = await runEndingsDesigner(client, concept, rules, events);
+    endings = await runEndingsDesigner(client, concept, rules, events, contract);
     await saveCheckpoint(finalSlug, "endings", endings);
   }
 
@@ -790,7 +1197,7 @@ async function main() {
 
   // Agent 7: Validator
   log("Agent 7 驗證師", "checking consistency...");
-  const validation = await runValidator(client, { concept, rules, events, endings });
+  const validation = await runValidator(client, { concept, rules, contract, events, endings });
   await saveCheckpoint(finalSlug, "validation", validation);
 
   // Write output files

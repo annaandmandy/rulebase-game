@@ -1,0 +1,511 @@
+import type { GameEvent, PlayerState, WorldState } from "@/types/game";
+
+const START = 1387;
+
+export const SCENARIO_EVENTS: GameEvent[] = [
+{
+    id: "event_intake_briefing",
+    title: "夜間留觀須知",
+    trigger: (player: PlayerState, world: WorldState): boolean =>
+      player.currentLocation === "triage_desk",
+    description:
+      "凌晨一點四十三分，你被安置在留觀區。床頭夾著一張護貝過的《夜間留觀須知》，七條規則以工整字體印刷。值班護理站的燈亮著，卻沒看見人。空氣裡有消毒水與一絲鐵鏽味。",
+    choices: [
+      {
+        id: "read_carefully",
+        label: "仔細閱讀整張須知",
+        resultText: "你記下七條規則。第二條被人用原子筆劃了線。",
+        effects: [
+          { type: "sheet", value: "doc_official_observation_guide" },
+          { type: "clue", value: "監視器任何時刻都不應顯示為一直線" }
+        ]
+      },
+      {
+        id: "look_around",
+        label: "先觀察四周環境",
+        resultText: "鄰床的簾子拉著，裡頭的心電監視器規律地響。沒有人。",
+        effects: [
+          { type: "anomaly", value: 1 },
+          { type: "clue", value: "鄰床有監視器聲，卻看不見病患" }
+        ]
+      },
+      {
+        id: "find_staff",
+        label: "出聲呼喚護理人員",
+        resultText: "沒有回應。但你聽見某處傳來推病床的滾輪聲，越來越近。",
+        effects: [
+          { type: "suspicion", value: 5 },
+          { type: "sanity", value: -5 }
+        ]
+      }
+    ],
+    once: true
+  },
+  {
+    id: "event_wristband_wear",
+    title: "床頭的手環",
+    trigger: (player: PlayerState, world: WorldState): boolean =>
+      player.currentLocation === "triage_desk" &&
+      player.timeMinutes <= 1387 + 30 &&
+      !player.foundSheets.includes("doc_staff_handover_memo"),
+    description:
+      "床頭掛著一只塑膠手環，上面印著你不認得的編號與一個姓名欄位——欄位是空白的。須知第一條要求你在三十分鐘內自行配戴。手環內側似乎還留有別人手腕的暖意。",
+    choices: [
+      {
+        id: "wear_it",
+        label: "依規定戴上手環",
+        resultText: "手環扣緊的瞬間，空白姓名欄浮現了你的名字。你沒寫過。",
+        effects: [
+          { type: "flag", key: "woreWristband", value: true },
+          { type: "anomaly", value: 2 },
+          { type: "sanity", value: -10 }
+        ]
+      },
+      {
+        id: "inspect_name",
+        label: "查看手環內側的痕跡",
+        resultText: "內側殘留前一個編號，被刮除過。交班備忘錄滑落床下。",
+        effects: [
+          { type: "sheet", value: "doc_staff_handover_memo" },
+          { type: "clue", value: "手環編號被重複刮除使用" }
+        ]
+      },
+      {
+        id: "pocket_it",
+        label: "把手環收進口袋不戴",
+        resultText: "你拒絕配戴。護理站的螢幕閃了一下，你的床號變成「待確認」。",
+        effects: [
+          { type: "suspicion", value: 10 },
+          { type: "flag", key: "refusedWristband", value: true }
+        ]
+      }
+    ],
+    once: true
+  },
+  {
+    id: "event_monitor_check",
+    title: "不該是直線的波形",
+    trigger: (player: PlayerState, world: WorldState): boolean =>
+      player.discoveredClues.includes("監視器任何時刻都不應顯示為一直線"),
+    description:
+      "你被接上了心電監視器。第二條規則寫著：任何時刻監視器都不應顯示為一直線。你低頭看——導線確實貼在你胸口，可你不記得自己被接上過。波形跳動著，比你的心跳快了半拍。",
+    choices: [
+      {
+        id: "leave_connected",
+        label: "遵守規則，不去碰導線",
+        resultText: "波形繼續跳。你按住胸口，那裡沒有心跳，螢幕卻不是直線。",
+        effects: [
+          { type: "anomaly", value: 2 },
+          { type: "sanity", value: -15 },
+          { type: "clue", value: "你摸不到自己的脈搏，監視器卻有波形" }
+        ]
+      },
+      {
+        id: "pull_line",
+        label: "拔掉導線確認真假",
+        resultText: "導線拔離的剎那，波形沒有變直線——它換成了另一個人的節律。",
+        effects: [
+          { type: "flag", key: "pulledMonitorLine", value: true },
+          { type: "world", key: "hotelRealityStability", value: -20 },
+          { type: "ending", value: "ending_flatline" }
+        ]
+      },
+      {
+        id: "compare_neighbor",
+        label: "對照鄰床的監視器",
+        resultText: "鄰床的波形與你的一模一樣，連雜訊都同步。共用一條命。",
+        effects: [
+          { type: "anomaly", value: 2 },
+          { type: "sanity", value: -10 },
+          { type: "clue", value: "你與鄰床共用同一組生命徵象" }
+        ]
+      }
+    ],
+    once: true
+  },
+  {
+    id: "event_history_form",
+    title: "未填的病史欄",
+    trigger: (player: PlayerState, world: WorldState): boolean =>
+      player.timeMinutes >= 1387 + 240 &&
+      !player.foundSheets.includes("doc_previous_patient_note"),
+    description:
+      "護理師遞來一份病史問診表，說第三條規定須在黎明交班前填完所有欄位才能順利出院。表上有些欄位你看不懂：「最後一次離院日期」、「目前主治單位（地下）」。前任住客的紙條塞在表格夾層裡。",
+    choices: [
+      {
+        id: "fill_form",
+        label: "依規定完整填寫",
+        resultText: "你填完最後一欄。表頭的「留觀」被印章蓋成了「收治」。",
+        effects: [
+          { type: "flag", key: "filledHistoryForm", value: true },
+          { type: "anomaly", value: 2 },
+          { type: "sanity", value: -10 }
+        ]
+      },
+      {
+        id: "read_note",
+        label: "先讀紙條再決定",
+        resultText: "紙條寫：填完表你就出不去了，交班廣播響時往樓上跑。",
+        effects: [
+          { type: "sheet", value: "doc_previous_patient_note" },
+          { type: "clue", value: "前任住客警告：填完表就無法離院" }
+        ]
+      },
+      {
+        id: "refuse_void",
+        label: "拒絕填寫，留下空白",
+        resultText: "你劃掉所有欄位。系統將你的病歷標記為「資料不全」。",
+        effects: [
+          { type: "flag", key: "canVoidRecords", value: true },
+          { type: "suspicion", value: 15 }
+        ]
+      },
+      {
+        id: "fake_info",
+        label: "填入虛假的個人資料",
+        resultText: "你寫了假名。問診表自動更正回你的真名，墨水是濕的。",
+        effects: [
+          { type: "anomaly", value: 1 },
+          { type: "sanity", value: -15 }
+        ]
+      }
+    ],
+    once: true
+  },
+  {
+    id: "event_handover_broadcast",
+    title: "交班時間",
+    trigger: (player: PlayerState, world: WorldState): boolean =>
+      player.timeMinutes >= 1387 + 300,
+    description:
+      "天花板的廣播突然作響：「交班時間到，所有留觀病患請就定位。」第四條要求你回到床位接受核對。走廊盡頭的樓梯間亮起了上行燈號——那是須知裡從未提過的方向。腳步聲開始沿著病床逐一停下。",
+    choices: [
+      {
+        id: "return_bed",
+        label: "回到床位等待核對",
+        resultText: "推床聲在你床前停下。有人翻看名冊，唸出你的名字後打了勾。",
+        effects: [
+          { type: "flag", key: "returnedToBedAtBroadcast", value: true },
+          { type: "anomaly", value: 2 },
+          { type: "ending", value: "ending_filed" }
+        ]
+      },
+      {
+        id: "flee_upstairs",
+        label: "趁亂衝向上行的樓梯間",
+        resultText: "你逆著推床聲奔上樓梯，身後的核對聲始終差你一步。",
+        effects: [
+          { type: "flag", key: "fledUpstairs", value: true },
+          { type: "sanity", value: -10 },
+          { type: "ending", value: "ending_escape_stairs" }
+        ]
+      },
+      {
+        id: "void_records",
+        label: "趁交班空檔衝向病歷室作廢病歷",
+        condition: (player: PlayerState, world: WorldState): boolean =>
+          player.canVoidRecords === true,
+        resultText: "你撕下自己那頁病歷。名冊上的勾消失，連你也開始變淡。",
+        effects: [
+          { type: "flag", key: "voidedRecords", value: true },
+          { type: "world", key: "hotelRealityStability", value: -20 },
+          { type: "ending", value: "ending_never_registered" }
+        ]
+      },
+      {
+        id: "stand_still",
+        label: "站在原地，不回床也不逃",
+        resultText: "核對聲唸了你的名字兩次。名冊上，你被保留了一份。",
+        effects: [
+          { type: "anomaly", value: 2 },
+          { type: "sanity", value: -15 },
+          { type: "ending", value: "ending_two_yous" }
+        ]
+      }
+    ],
+    once: true
+  },
+  {
+    id: "event_wristband_wear_2",
+    title: "床頭的手環",
+    trigger: (player: PlayerState, world: WorldState): boolean =>
+      player.currentLocation === "triage_desk" &&
+      player.timeMinutes <= 1387 + 30 &&
+      player.foundSheets.includes("doc_staff_handover_memo"),
+    description:
+      "床頭掛著一只塑膠手環，上面印著你的名字與一組病歷號。須知說抵達三十分鐘內必須配戴，以便交班時確認身分。手環內側似乎還壓著一張對折的小紙條。",
+    choices: [
+      {
+        id: "wear_it",
+        label: "依須知配戴手環",
+        resultText: "手環扣上時發出輕響，像被誰勾選了。你的名字現在屬於這裡。",
+        effects: [
+          { type: "flag", key: "woreWristband", value: true },
+          { type: "suspicion", value: -10 }
+        ]
+      },
+      {
+        id: "read_note",
+        label: "先抽出夾著的紙條",
+        resultText: "紙條是員工備忘：「手環一旦戴上，交班時系統只認手環，不認本人。」",
+        effects: [
+          { type: "sheet", value: "doc_staff_handover_memo" },
+          { type: "clue", value: "手環優先於本人被核對" }
+        ]
+      },
+      {
+        id: "pocket_it",
+        label: "把手環收進口袋不戴",
+        resultText: "你違反了第一條。沒人立刻出現，但巡房聲在床尾停了一拍。",
+        effects: [
+          { type: "suspicion", value: 12 },
+          { type: "anomaly", value: 1 }
+        ]
+      }
+    ],
+    once: true
+  }
+,
+{
+  id: "event_monitor_check",
+  title: "不該是直線的波形",
+  trigger: (player: PlayerState, world: WorldState): boolean =>
+    player.currentLocation === "observation_room" && !player.checkedMonitor,
+  description:
+    "監視器規律地跳動，第二條規定任何時刻都不應顯示為一直線。你盯著看，發現波形比你的脈搏快了半拍——它跳的，似乎不完全是你的心。導線連在你貼片上，也連向床簾後的另一處。",
+  choices: [
+    {
+      id: "leave_alone",
+      label: "遵守規定，不碰導線",
+      resultText: "你別開視線。波形繼續跳，替誰維持著「還活著」。",
+      effects: [{ type: "sanity", value: -8 }],
+    },
+    {
+      id: "trace_line",
+      label: "順著導線看向床簾後",
+      resultText: "床簾後有第二組貼片，黏在空蕩的床墊上，波形一模一樣。",
+      effects: [
+        { type: "sanity", value: -15 },
+        { type: "clue", value: "兩張床共用一條波形" },
+        { type: "anomaly", value: 2 },
+      ],
+    },
+    {
+      id: "pull_line",
+      label: "拔掉自己的導線",
+      resultText: "你這頭歸零，螢幕卻沒變直線——它仍跳著，比你更久。",
+      effects: [
+        { type: "flag", key: "pulledMonitorLine", value: true },
+        { type: "sanity", value: -12 },
+        { type: "ending", value: "ending_flatline" },
+      ],
+    },
+  ],
+  once: true,
+},
+{
+  id: "event_history_form",
+  title: "未填的病史欄",
+  trigger: (player: PlayerState, world: WorldState): boolean =>
+    player.currentLocation === "observation_room" && !player.filledHistoryForm,
+  description:
+    "第三條說，完成體溫與病史問診是順利出院的必要程序，請於黎明交班前填完。表單最末一欄問：「本次住院原因」。但你想不起自己為何被送來，也想不起是誰送的。前任留下的紙條夾在筆下。",
+  choices: [
+    {
+      id: "fill_form",
+      label: "依規定填完所有欄位",
+      resultText: "你寫下一個說不清的理由。筆跡乾掉的瞬間，你正式成了病患。",
+      effects: [
+        { type: "flag", key: "filledHistoryForm", value: true },
+        { type: "suspicion", value: -8 },
+      ],
+    },
+    {
+      id: "read_prev_note",
+      label: "先讀前任住客的紙條",
+      resultText: "紙條：「別填原因欄。填完那一格，你就有了被收治的病歷。」",
+      effects: [
+        { type: "sheet", value: "doc_previous_patient_note" },
+        { type: "clue", value: "填表＝建立可歸檔病歷" },
+      ],
+    },
+    {
+      id: "refuse_fill",
+      label: "拒絕填寫，留欄位空白",
+      resultText: "空白的病歷無法歸檔。你還不完全屬於這裡——這也讓你能作廢它。",
+      effects: [
+        { type: "flag", key: "canVoidRecords", value: true },
+        { type: "suspicion", value: 15 },
+      ],
+    },
+  ],
+  once: true,
+},
+{
+  id: "event_nurse_help",
+  title: "主動協助你的她",
+  trigger: (player: PlayerState, world: WorldState): boolean =>
+    player.currentLocation === "observation_room" && world.staffMode !== "hostile",
+  description:
+    "第五條要你信任夜班護理人員的指引。她笑著走來，說要協助你完成所有留觀程序。她的識別證寫著「林」，照片卻有些模糊。員工備忘錄裡提過一個名字——也姓林，但那是上一班還沒交出去的人。",
+  choices: [
+    {
+      id: "accept_help",
+      label: "信任她，接受全部協助",
+      resultText: "她替你戴好手環、填好表。「這樣，下一班就換你了。」她說。",
+      effects: [
+        { type: "flag", key: "acceptedNurseHelp", value: true },
+        { type: "sanity", value: -10 },
+      ],
+    },
+    {
+      id: "verify_badge",
+      label: "查證她的識別證與班表",
+      resultText: "班表上「林」早該下班三班了。她的笑容沒變，手卻收了回去。",
+      effects: [
+        { type: "clue", value: "護理師林從未真正交班" },
+        { type: "suspicion", value: 10 },
+        { type: "anomaly", value: 1 },
+      ],
+    },
+    {
+      id: "check_memo",
+      label: "對照員工備忘錄上的名字",
+      resultText: "備忘：「林還沒找到接班的人。被她協助完的，就是下一個她。」",
+      effects: [
+        { type: "sheet", value: "doc_staff_handover_memo" },
+        { type: "sanity", value: -12 },
+      ],
+    },
+  ],
+  once: true,
+},
+{
+  id: "event_records_room",
+  title: "病歷室",
+  trigger: (player: PlayerState, world: WorldState): boolean =>
+    player.currentLocation === "records_room",
+  description:
+    "第六條：病歷室僅供院方人員調閱，你的病歷將於黎明交班正式歸檔，在此之前請勿翻找或更動。門虛掩著。架上一格貼著今天的日期，裡面已經放好一份病歷——封面是你的名字，等著天亮被收進去。",
+  choices: [
+    {
+      id: "read_label",
+      label: "查看歸檔架上的標籤說明",
+      resultText: "標籤：「未經批價之病歷，於交班完成前皆可作廢。」",
+      effects: [
+        { type: "sheet", value: "doc_records_label" },
+        { type: "clue", value: "交班前病歷可作廢" },
+      ],
+    },
+    {
+      id: "void_record",
+      label: "趁交班前抽走並作廢你的病歷",
+      resultText: "你撕掉封面。系統裡，你成了一個從未掛號的人。",
+      effects: [
+        { type: "flag", key: "voidedRecords", value: true },
+        { type: "suspicion", value: 20 },
+        { type: "anomaly", value: 2 },
+      ],
+    },
+    {
+      id: "leave_records",
+      label: "遵守規定，不碰任何文件",
+      resultText: "你退出病歷室。那份病歷靜靜躺著，等黎明把你正式收下。",
+      effects: [{ type: "suspicion", value: -5 }],
+    },
+  ],
+  once: true,
+},
+{
+  id: "event_handover_broadcast",
+  title: "交班時間",
+  trigger: (player: PlayerState, world: WorldState): boolean =>
+    player.timeMinutes >= 1800 && player.timeMinutes < 1860,
+  description:
+    "廣播響起：「交班時間，所有留觀病患請就定位，留在床位以完成核對。」第四條要你回床。但前任的紙條早寫過：交班核對時被點到名的，會被一起帶走。此刻樓梯間「上行」的指示燈，亮了。",
+  choices: [
+    {
+      id: "return_bed",
+      label: "依規定回到自己的床位",
+      resultText: "你躺回床上。點名聲念到你的名字，你應了一聲——就被收下了。",
+      effects: [
+        { type: "flag", key: "returnedToBedAtBroadcast", value: true },
+        { type: "ending", value: "ending_filed" },
+      ],
+      condition: (player: PlayerState, world: WorldState): boolean =>
+        player.filledHistoryForm === true && player.voidedRecords !== true,
+    },
+    {
+      id: "flee_upstairs",
+      label: "趁點名前衝向上行的樓梯",
+      resultText: "你逆著廣播往上跑。身後的核對聲漸遠，那扇門難得地為你開著。",
+      effects: [
+        { type: "flag", key: "fledUpstairs", value: true },
+        { type: "sanity", value: -8 },
+        { type: "ending", value: "ending_escape_stairs" },
+      ],
+      condition: (player: PlayerState, world: WorldState): boolean =>
+        player.returnedToBedAtBroadcast !== true,
+    },
+    {
+      id: "void_then_listen",
+      label: "病歷已作廢，留下聽完點名",
+      resultText: "點名念到一半，停在你的位置——名冊上，已經沒有你了。",
+      effects: [{ type: "ending", value: "ending_never_registered" }],
+      condition: (player: PlayerState, world: WorldState): boolean =>
+        player.voidedRecords === true,
+    },
+    {
+      id: "stay_silent",
+      label: "躲在原地，不回床也不逃",
+      resultText: "點名照念你的名字，有人替你應了聲。名冊上，保留了一份。",
+      effects: [
+        { type: "sanity", value: -12 },
+        { type: "ending", value: "ending_two_yous" },
+      ],
+      condition: (player: PlayerState, world: WorldState): boolean =>
+        player.returnedToBedAtBroadcast !== true && player.fledUpstairs !== true,
+    },
+  ],
+  once: true,
+},
+{
+  id: "event_discharge_counter",
+  title: "批價櫃台",
+  trigger: (player: PlayerState, world: WorldState): boolean =>
+    player.currentLocation === "discharge_counter" && player.timeMinutes >= 1860,
+  description:
+    "第七條：出院請至一樓批價櫃台辦理，批價完成後玻璃自動門將開啟，請勿在批價前強行離院。櫃台後沒有人，螢幕亮著你的應繳金額。門外天已亮，玻璃門映出你的樣子——映得有點慢。",
+  choices: [
+    {
+      id: "pay_discharge",
+      label: "依規定完成批價再離院",
+      resultText: "金額結清，門開了。你走出去，回頭時櫃台螢幕又跳出一筆新帳。",
+      effects: [
+        { type: "sheet", value: "doc_official_observation_guide" },
+        { type: "suspicion", value: -10 },
+      ],
+    },
+    {
+      id: "force_door",
+      label: "不批價，直接推開玻璃門",
+      resultText: "你違反第七條。門紋風不動，倒影卻先你一步伸手——推開了。",
+      effects: [
+        { type: "sanity", value: -15 },
+        { type: "anomaly", value: 2 },
+        { type: "world", key: "hotelRealityStability", value: -20 },
+      ],
+    },
+    {
+      id: "check_bill",
+      label: "細看螢幕上的應繳項目",
+      resultText: "帳單最後一項寫著：「留觀身分一名，永久保留費。」",
+      effects: [
+        { type: "clue", value: "出院需付出留觀身分" },
+        { type: "sanity", value: -8 },
+      ],
+    },
+  ],
+  once: true,
+}
+];

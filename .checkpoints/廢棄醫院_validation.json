@@ -1,0 +1,19 @@
+{
+  "valid": true,
+  "issues": [],
+  "warnings": [
+    "eventIds 含重複項目，建議去重"
+  ],
+  "suggestions": [
+    "多個結局共用 event_handover_broadcast，可增加路徑差異化"
+  ],
+  "rulesCoverage": {
+    "1": true,
+    "2": true,
+    "3": true,
+    "4": true,
+    "5": true,
+    "6": true,
+    "7": true
+  }
+}

@@ -26,70 +26,112 @@ npm run build
 |------|------|
 | 山霧旅館 | `lib/scenarios/shanwu/` |
 
-### 生成新劇本
+---
 
-使用 Multi-Agent 生成器（需要 Anthropic API Key）：
+## 生成新劇本
+
+### 需求
 
 ```bash
 export ANTHROPIC_API_KEY=sk-ant-...
+```
 
-# 生成劇本
+### 執行
+
+```bash
+npx tsx scripts/generateScenario.ts "主題" "關鍵字"
+
+# 範例
 npx tsx scripts/generateScenario.ts "廢棄醫院" "isolation clinical"
 npx tsx scripts/generateScenario.ts "深夜辦公大樓" "corporate liminal"
 npx tsx scripts/generateScenario.ts "孤島渡假村" "tropical ritual"
 ```
 
-生成完成後，輸出在 `lib/scenarios/[劇本名]/`：
+中途失敗可直接重跑，已完成的階段從 `.checkpoints/` 讀取，不重複花費。
+
+### 生成完成後：加入遊戲
+
+**Step 1** — 檢查輸出
 
 ```
 lib/scenarios/廢棄醫院/
-  index.ts           ← ScenarioPack export
+  index.ts           ← ScenarioPack（匯入這個）
   events.ts
   rules.ts
   ruleSheets.ts
   endings.ts
   locationActions.ts
   dialogues/index.ts
-  concept.json       ← 原始設計資料
+  concept.json       ← 原始設計資料（可審閱）
   validation.json    ← 一致性報告
 ```
 
-### 將生成的劇本加入遊戲
+打開 `validation.json` 確認 `valid: true`，`issues` 為空。
 
-編輯 `lib/scenarioRegistry.ts`，加入兩行：
+**Step 2** — 登記到 registry
+
+編輯 `lib/scenarioRegistry.ts`：
 
 ```ts
-import { MY_SCENARIO } from "./scenarios/廢棄醫院";
+import { SHANWU_SCENARIO } from "./scenarios/shanwu";
+import { MY_SCENARIO } from "./scenarios/廢棄醫院"; // ← 新增
 
 export const ALL_SCENARIOS: ScenarioPack[] = [
   SHANWU_SCENARIO,
-  MY_SCENARIO,   // ← 新增這行
+  MY_SCENARIO, // ← 新增
 ];
 ```
 
-重新整理頁面，首頁會自動出現新劇本卡片。
+**Step 3** — 確認編譯
 
-### 生成器 Pipeline
+```bash
+npm run build
+```
+
+如果有 TypeScript 錯誤（import 路徑、型別不符），手動修正 `index.ts` 的 import 路徑即可。常見問題：
+
+- 路徑用 `@/types/game` 而不是 `./types`
+- `ScenarioPack` 從 `@/types/scenario` 匯入
+- `checkScenarioEnding` 要符合 `(player, world, forced?) => GameEnding | null` 簽名
+
+**Step 4** — 重啟 dev server
+
+```bash
+npm run dev
+```
+
+首頁會自動出現新劇本卡片。
+
+---
+
+## 生成器 Pipeline
 
 ```
 主題輸入
    ↓
-Agent 1  概念師      → 場景概念（地點/NPC/隱藏真相）
+Agent 1   概念師         → 場景概念（地點/NPC/隱藏真相）
    ↓
-Agent 2  規則設計師  → 規則系統（矛盾規則/陷阱規則/三個文字版本）
+Agent 2a  規則設計師      → 主規則 + 地點規則（含 3 個腐化版本）
+Agent 2b  文件設計師      → 可發現的矛盾文件
    ↓
-Agent 3 ─────────── Agent 4     ← 並行
-事件工程師           對話作家
-（事件+觸發條件）   （NPC多輪對話樹）
+Agent 2c  一致性協調師    → 設計合約（規則→事件→結局的對照表）
    ↓
-Agent 5  結局設計師  → 5-7個結局
+   ┌──────────────────────────────────────────┐
+   Agent 3a  事件工程師（前半）                │ 並行
+   Agent 3b  事件工程師（後半）                │
+   Agent 4   對話作家（每 NPC 一個 call）      │
+   └──────────────────────────────────────────┘
    ↓
-Agent 6  程式碼生成師 → TypeScript 檔案
+Agent 5   結局設計師      → 5-7 個結局（條件對齊設計合約）
    ↓
-Agent 7  驗證師      → 一致性報告
+   ┌──────────────────────────────────────────┐
+   Agent 6   code-gen（每個 .ts 一個 call）   │ 並行
+   └──────────────────────────────────────────┘
+   ↓
+Agent 7   驗證師          → 一致性報告
 ```
 
-失敗可從中間續跑（checkpoint 存在 `.checkpoints/`）。
+**設計合約（Agent 2c）** 是所有後續 agent 的強制約束：每條規則→必須對應哪個事件 ID，每份文件→必須開放哪些對話主題，每個結局→需要哪些 flag 和事件。確保規則、事件、對話、結局四個系統 align。
 
 ---
 
@@ -110,13 +152,15 @@ components/             UI 元件
 lib/
   gameState.ts          Zustand store
   scenarioRegistry.ts   劇本清單
-  scenarios/shanwu/     山霧旅館劇本
-  events.ts             事件資料
-  locations.ts          地點資料
-  dialogues/            NPC 對話樹
-  rules.ts              規則資料
-  ruleSheets.ts         可發現的文件
-  endings.ts            結局資料
+  scenarios/            劇本資料夾
+    shanwu/             山霧旅館（手寫）
+    [generated]/        生成劇本
+  events.ts             山霧旅館事件資料
+  locations.ts          山霧旅館地點資料
+  dialogues/            山霧旅館 NPC 對話樹
+  rules.ts              山霧旅館規則資料
+  ruleSheets.ts         山霧旅館可發現文件
+  endings.ts            山霧旅館結局資料
 
 types/
   game.ts               基礎型別

@@ -1,0 +1,179 @@
+{
+  "ruleEventMap": [
+    {
+      "ruleNumber": 1,
+      "mustTriggerEventId": "event_wristband_wear",
+      "exposedByDocId": "doc_staff_handover_memo",
+      "isTrap": true
+    },
+    {
+      "ruleNumber": 2,
+      "mustTriggerEventId": "event_monitor_check",
+      "exposedByDocId": "doc_staff_handover_memo",
+      "isTrap": true
+    },
+    {
+      "ruleNumber": 3,
+      "mustTriggerEventId": "event_history_form",
+      "exposedByDocId": "doc_previous_patient_note",
+      "isTrap": true
+    },
+    {
+      "ruleNumber": 4,
+      "mustTriggerEventId": "event_handover_broadcast",
+      "exposedByDocId": "doc_previous_patient_note",
+      "isTrap": true
+    },
+    {
+      "ruleNumber": 5,
+      "mustTriggerEventId": "event_nurse_help",
+      "exposedByDocId": "doc_staff_handover_memo",
+      "isTrap": true
+    },
+    {
+      "ruleNumber": 6,
+      "mustTriggerEventId": "event_records_room",
+      "exposedByDocId": "doc_records_label",
+      "isTrap": true
+    },
+    {
+      "ruleNumber": 7,
+      "mustTriggerEventId": "event_discharge_counter",
+      "exposedByDocId": "doc_official_observation_guide",
+      "isTrap": true
+    }
+  ],
+  "endingPaths": [
+    {
+      "endingId": "ending_never_registered",
+      "title": "從未掛號的人",
+      "requiredFlags": [
+        "voidedRecords"
+      ],
+      "requiredEvents": [
+        "event_records_room",
+        "event_handover_broadcast"
+      ],
+      "blockedBy": [
+        "woreWristband",
+        "filledHistoryForm",
+        "returnedToBedAtBroadcast"
+      ]
+    },
+    {
+      "endingId": "ending_escape_stairs",
+      "title": "上行燈亮的那一次",
+      "requiredFlags": [
+        "fledUpstairs"
+      ],
+      "requiredEvents": [
+        "event_handover_broadcast"
+      ],
+      "blockedBy": [
+        "returnedToBedAtBroadcast"
+      ]
+    },
+    {
+      "endingId": "ending_filed",
+      "title": "正式收治",
+      "requiredFlags": [
+        "filledHistoryForm",
+        "returnedToBedAtBroadcast"
+      ],
+      "requiredEvents": [
+        "event_handover_broadcast"
+      ],
+      "blockedBy": [
+        "voidedRecords"
+      ]
+    },
+    {
+      "endingId": "ending_nurse_replacement",
+      "title": "下一班的她",
+      "requiredFlags": [
+        "acceptedNurseHelp",
+        "woreWristband"
+      ],
+      "requiredEvents": [
+        "event_nurse_help"
+      ],
+      "blockedBy": [
+        "voidedRecords"
+      ]
+    },
+    {
+      "endingId": "ending_two_yous",
+      "title": "名冊上保留一份",
+      "requiredFlags": [],
+      "requiredEvents": [
+        "event_handover_broadcast"
+      ],
+      "blockedBy": [
+        "returnedToBedAtBroadcast",
+        "fledUpstairs"
+      ]
+    },
+    {
+      "endingId": "ending_flatline",
+      "title": "比你更久的波形",
+      "requiredFlags": [
+        "pulledMonitorLine"
+      ],
+      "requiredEvents": [
+        "event_monitor_check"
+      ],
+      "blockedBy": []
+    }
+  ],
+  "contradictionEvents": [
+    {
+      "contradictionIndex": 0,
+      "eventId": "event_history_form",
+      "choiceConsequence": "填寫→filledHistoryForm；拒填→可作廢病歷"
+    },
+    {
+      "contradictionIndex": 1,
+      "eventId": "event_handover_broadcast",
+      "choiceConsequence": "回床→被核對歸檔；上行→fledUpstairs逃離"
+    },
+    {
+      "contradictionIndex": 2,
+      "eventId": "event_nurse_help",
+      "choiceConsequence": "接受→acceptedNurseHelp接班；查證→揭穿其身分"
+    }
+  ],
+  "docUsageHints": [
+    {
+      "docId": "doc_official_observation_guide",
+      "relevantDialogueTopics": [
+        "留觀程序",
+        "批價出院",
+        "信任護理師"
+      ]
+    },
+    {
+      "docId": "doc_previous_patient_note",
+      "relevantDialogueTopics": [
+        "交班廣播",
+        "拒絕填表",
+        "往上逃"
+      ]
+    },
+    {
+      "docId": "doc_staff_handover_memo",
+      "relevantDialogueTopics": [
+        "護理師林",
+        "手環與監視器",
+        "趁交班前走"
+      ]
+    },
+    {
+      "docId": "doc_records_label",
+      "relevantDialogueTopics": [
+        "作廢病歷",
+        "明天的歸檔",
+        "從未掛號"
+      ]
+    }
+  ]
+}
