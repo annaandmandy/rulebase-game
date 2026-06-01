@@ -8,7 +8,6 @@ export const FRONT_DESK_DIALOGUE: Dialogue = {
   scenes: {
     // ─── Opening ────────────────────────────────────────────────────────────
     greet: {
-      id: "greet",
       npcText: (_p, w, _m) => {
         switch (w.staffMode) {
           case "normal":
@@ -39,7 +38,6 @@ export const FRONT_DESK_DIALOGUE: Dialogue = {
 
     // ─── Main Menu ───────────────────────────────────────────────────────────
     main_menu: {
-      id: "main_menu",
       npcText: (_p, w, _m) => {
         if (w.staffMode === "hostile") return "（員工等著你說話，沒有表情。）";
         return "（請問有什麼需要？）";
@@ -94,7 +92,6 @@ export const FRONT_DESK_DIALOGUE: Dialogue = {
 
     // ─── Other Guests ────────────────────────────────────────────────────────
     other_guests: {
-      id: "other_guests",
       npcText:
         "本旅館尊重住客隱私，恕無法提供其他住客的相關資訊。",
       choices: [
@@ -125,7 +122,6 @@ export const FRONT_DESK_DIALOGUE: Dialogue = {
     },
 
     other_guests_push: {
-      id: "other_guests_push",
       npcText: (p, w, _m) => {
         if (w.anomalyAttention >= 3 && p.sanity > 50) {
           return "（員工停頓了一下。）「目前……只有您一位住客。正式登記的。」（他特別強調了「正式登記的」四個字，然後低下頭。）";
@@ -147,7 +143,6 @@ export const FRONT_DESK_DIALOGUE: Dialogue = {
 
     // ─── Basement Question ───────────────────────────────────────────────────
     basement_question: {
-      id: "basement_question",
       npcText: "本旅館沒有地下室。",
       choices: [
         {
@@ -173,7 +168,6 @@ export const FRONT_DESK_DIALOGUE: Dialogue = {
     },
 
     basement_push: {
-      id: "basement_push",
       npcText: (_p, w, _m) => {
         if (w.staffMode === "watching") {
           return "（員工停頓了很長的時間。）「那扇門……不應該在那裡的。」（他低下頭。）「請您待在您的房間裡。」";
@@ -196,7 +190,6 @@ export const FRONT_DESK_DIALOGUE: Dialogue = {
     },
 
     basement_memo_callout: {
-      id: "basement_memo_callout",
       npcText:
         "（員工僵住了。很長的沉默。）「您在哪裡看到那份文件的？」（他的語氣沒有變，但他放下了手上的筆。）",
       choices: [
@@ -215,7 +208,6 @@ export const FRONT_DESK_DIALOGUE: Dialogue = {
 
     // ─── Early Checkout ──────────────────────────────────────────────────────
     early_checkout: {
-      id: "early_checkout",
       npcText: (p, _w, _m) => {
         if (p.timeMinutes >= 24 * 60) {
           return "「凌晨時段我們暫時無法辦理退房手續，建議您等到天亮後再辦理。」";
@@ -241,7 +233,6 @@ export const FRONT_DESK_DIALOGUE: Dialogue = {
     },
 
     checkout_memo_callout: {
-      id: "checkout_memo_callout",
       npcText:
         "「……這只是為了確保住客安全。凌晨山路能見度低。」（停頓。）「請您安心休息。」（答案太流暢，太準確，像是背過的。）",
       choices: [
@@ -259,7 +250,6 @@ export const FRONT_DESK_DIALOGUE: Dialogue = {
 
     // ─── Report Keycard ──────────────────────────────────────────────────────
     report_keycard: {
-      id: "report_keycard",
       npcText:
         "「感謝您告知。我們會立即處理。」（員工做了一個記錄。）「您看到的是在走廊上嗎？」",
       choices: [
@@ -279,7 +269,6 @@ export const FRONT_DESK_DIALOGUE: Dialogue = {
     },
 
     report_keycard_detail: {
-      id: "report_keycard_detail",
       npcText:
         "「我們會派人確認。」（停頓。員工在寫著什麼。）「請問那個人的外貌您有印象嗎？」",
       choices: [
@@ -297,7 +286,6 @@ export const FRONT_DESK_DIALOGUE: Dialogue = {
     },
 
     report_keycard_similar: {
-      id: "report_keycard_similar",
       npcText:
         "（很長的沉默。員工沒有再寫任何東西。）「我明白了。謝謝您告知。」（他的語氣變了。不是變冷，而是變成某種更平靜、更確定的東西。他知道這意味著什麼，而那個意思不好。）",
       choices: [
@@ -316,7 +304,6 @@ export const FRONT_DESK_DIALOGUE: Dialogue = {
 
     // ─── Name Calling ─────────────────────────────────────────────────────────
     report_name_calling: {
-      id: "report_name_calling",
       npcText:
         "「可能是幻覺，建議您休息。」",
       choices: [
@@ -347,7 +334,6 @@ export const FRONT_DESK_DIALOGUE: Dialogue = {
     },
 
     report_name_memo: {
-      id: "report_name_memo",
       npcText:
         "（員工停止了表演。）「……請問您是在哪裡找到那份文件的？」",
       choices: [
@@ -373,7 +359,6 @@ export const FRONT_DESK_DIALOGUE: Dialogue = {
     },
 
     memo_confrontation: {
-      id: "memo_confrontation",
       npcText:
         "（員工把他的記事本合上。）「那份文件不完整。有些規則您沒有看到。」（停頓。）「建議您回房間休息。」",
       choices: [
@@ -393,7 +378,6 @@ export const FRONT_DESK_DIALOGUE: Dialogue = {
 
     // ─── Previous Guest ──────────────────────────────────────────────────────
     previous_guest: {
-      id: "previous_guest",
       npcText:
         "「本旅館不追蹤住客離店後的行蹤。」",
       choices: [
@@ -413,7 +397,6 @@ export const FRONT_DESK_DIALOGUE: Dialogue = {
     },
 
     previous_guest_303: {
-      id: "previous_guest_303",
       npcText:
         "（員工停頓了很長時間。）「303……」（他看了一眼登記本，然後視線移開。）「那個房間最近沒有住客記錄。」（但你知道那張紙條在那裡。它是發黃的，它是舊的。）",
       choices: [
@@ -432,7 +415,6 @@ export const FRONT_DESK_DIALOGUE: Dialogue = {
 
     // ─── Badge Color ─────────────────────────────────────────────────────────
     badge_color: {
-      id: "badge_color",
       npcText: (_p, _w, m) => {
         if (m.askedAboutBadgeBefore) {
           return "「我剛才已經解釋過了。」";
@@ -461,7 +443,6 @@ export const FRONT_DESK_DIALOGUE: Dialogue = {
     },
 
     badge_changed: {
-      id: "badge_changed",
       npcText:
         "（員工看了一眼自己的名牌。然後抬頭看著你。）「我……一直都是這個顏色。」",
       choices: [
@@ -479,7 +460,6 @@ export const FRONT_DESK_DIALOGUE: Dialogue = {
     },
 
     badge_temp: {
-      id: "badge_temp",
       npcText:
         "「臨時人員是……補充性質的服務人員。」（員工沒有看你的眼睛。）「您還有其他問題嗎？」",
       choices: [
@@ -498,7 +478,6 @@ export const FRONT_DESK_DIALOGUE: Dialogue = {
     },
 
     rule5_awareness: {
-      id: "rule5_awareness",
       npcText:
         "（員工微笑了。微笑沒有到達他的眼睛。）「沒有關係。這次算例外。」",
       choices: [

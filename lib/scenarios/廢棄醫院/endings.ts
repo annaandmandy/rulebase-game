@@ -1,4 +1,4 @@
-import type { PlayerState, WorldState, GameEnding } from './types';
+import type { PlayerState, WorldState, GameEnding } from '@/types/game';
 
 // 取得已觸發事件清單（容錯：可能掛在 player 或 world 上）
 function getTriggeredEvents(player: PlayerState, world: WorldState): string[] {
@@ -111,16 +111,14 @@ export function checkScenarioEnding(
   if (forcedId) {
     const forced = endings.find((e) => e.id === forcedId);
     if (forced) {
-      const { condition, ...data } = forced;
-      return data;
+      return forced;
     }
     return null;
   }
 
   for (const ending of endings) {
     if (ending.condition(player, world)) {
-      const { condition, ...data } = ending;
-      return data;
+      return ending;
     }
   }
 

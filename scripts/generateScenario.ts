@@ -23,6 +23,8 @@ import Anthropic from "@anthropic-ai/sdk";
 import { writeFile, mkdir, readFile } from "fs/promises";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
+import { postProcess } from "../lib/generator/postProcess.js";
+import { addScenarioToRegistry, getScenarioExportName } from "../lib/generator/addToRegistry.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = join(__dirname, "..");
@@ -1202,6 +1204,35 @@ async function main() {
 
   // Write output files
   await writeScenario(finalSlug, concept, code, validation);
+
+  // Post-processing: fix imports, dedup IDs, run tsc
+  const outDir = join(PROJECT_ROOT, "lib", "scenarios", finalSlug);
+  log("後處理", "修正 import 路徑、去重 event ID、驗證 TypeScript...");
+  const ppResult = await postProcess(outDir, PROJECT_ROOT);
+
+  if (ppResult.fixed.length > 0) {
+    console.log(`\n🔧 自動修正（${ppResult.fixed.length} 項）：`);
+    ppResult.fixed.forEach((f) => console.log(`   ✓ ${f}`));
+  }
+
+  if (ppResult.tscErrors.length > 0) {
+    console.log(`\n⚠️  TypeScript 錯誤（需手動修正）：`);
+    ppResult.tscErrors.forEach((e) => console.log(`   ${e}`));
+  } else {
+    console.log(`   ✓ TypeScript 編譯通過`);
+  }
+
+  // Auto-add to registry if validation passed and no tsc errors
+  if (validation.valid && ppResult.ok) {
+    log("加入遊戲", `正在將 ${finalSlug} 加入 scenarioRegistry.ts...`);
+    const exportName = await getScenarioExportName(outDir);
+    await addScenarioToRegistry(finalSlug, exportName, PROJECT_ROOT);
+    console.log(`   ✓ 已加入 registry（${exportName}）`);
+    console.log(`   ✓ 重啟 dev server 後首頁即可看到新劇本`);
+  } else {
+    console.log(`\n⚠️  未自動加入遊戲（存在問題需先修正）`);
+    console.log(`   手動加入：編輯 lib/scenarioRegistry.ts`);
+  }
 }
 
 main().catch((err) => {

@@ -1,4 +1,4 @@
-import { LocationData } from "../types";
+import { LocationData } from "@/types/scenario";
 
 // 遊戲開始時間：當日 23:47 = 1427 分鐘
 // 次日早上 07:00 = 1440 + 420 = 1860 分鐘
@@ -10,7 +10,7 @@ export const SCENARIO_LOCATIONS: Record<string, LocationData> = {
     id: "triage_desk",
     name: "夜間掛號台",
     description:
-      "一盞檯燈、一疊掛號單，上面已經印好你的名字與一個你不記得的病歷號。叫號螢幕停在『000』。",
+      (_player, _world) => "一盞檯燈、一疊掛號單，上面已經印好你的名字與一個你不記得的病歷號。叫號螢幕停在『000』。",
     adjacentLocations: ["observation_ward", "nurse_station", "morning_exit"],
     actions: [
       {
@@ -39,7 +39,7 @@ export const SCENARIO_LOCATIONS: Record<string, LocationData> = {
       {
         id: "take_notice_sheet",
         label: "取走檯燈下的『夜間留觀須知』",
-        condition: "!player.foundSheets.includes('official_notice')",
+        condition: (p, w) => !p.foundSheets.includes('official_notice'),
         resultText:
           "一張護貝過的須知壓在燈座下，邊角被翻得發白，像是被許多人讀過、又放回原位。",
         effects: [
@@ -55,7 +55,7 @@ export const SCENARIO_LOCATIONS: Record<string, LocationData> = {
     id: "observation_ward",
     name: "留觀區病床",
     description:
-      "六張鋪好的病床，只有靠窗那張掀開了棉被，床頭手環袋寫著你的姓氏。心電監視器接著沒有人，卻跑著穩定的波形。",
+      (_player, _world) => "六張鋪好的病床，只有靠窗那張掀開了棉被，床頭手環袋寫著你的姓氏。心電監視器接著沒有人，卻跑著穩定的波形。",
     adjacentLocations: ["triage_desk", "corridor_b", "nurse_station"],
     actions: [
       {
@@ -100,13 +100,13 @@ export const SCENARIO_LOCATIONS: Record<string, LocationData> = {
     id: "nurse_station",
     name: "護理站",
     description:
-      "夜班護理師坐在這裡，面前是一本手寫交班簿。牆上時鐘比你手機慢了十一分鐘。",
+      (_player, _world) => "夜班護理師坐在這裡，面前是一本手寫交班簿。牆上時鐘比你手機慢了十一分鐘。",
     adjacentLocations: ["triage_desk", "observation_ward", "exam_room_3"],
     actions: [
       {
         id: "read_handover_book",
         label: "偷看交班簿",
-        condition: "player.suspicion < 60",
+        condition: (p, w) => p.suspicion < 60,
         resultText:
           "最後一行墨跡未乾：『靠窗床病人意識清醒，會自行起身走動，請勿讓他在七點前離院。』",
         effects: [
@@ -131,7 +131,7 @@ export const SCENARIO_LOCATIONS: Record<string, LocationData> = {
       {
         id: "find_staff_memo",
         label: "翻找抽屜裡的員工備忘",
-        condition: "!player.foundSheets.includes('staff_memo')",
+        condition: (p, w) => !p.foundSheets.includes('staff_memo'),
         resultText:
           "一張影印備忘夾在病歷夾裡，抬頭蓋著『夜班內部』，內容與牆上的須知並不一致。",
         effects: [
@@ -147,7 +147,7 @@ export const SCENARIO_LOCATIONS: Record<string, LocationData> = {
     id: "corridor_b",
     name: "B棟連通走廊",
     description:
-      "兩側貼著褪色的科別指示牌，地上每隔幾步有一個乾掉的腳印。盡頭的逃生門標示亮著綠燈，卻反鎖。",
+      (_player, _world) => "兩側貼著褪色的科別指示牌，地上每隔幾步有一個乾掉的腳印。盡頭的逃生門標示亮著綠燈，卻反鎖。",
     adjacentLocations: ["observation_ward", "records_room", "stairwell"],
     actions: [
       {
@@ -180,7 +180,7 @@ export const SCENARIO_LOCATIONS: Record<string, LocationData> = {
     id: "exam_room_3",
     name: "第三診間",
     description:
-      "診療床、血壓計、一面照不出你完整身影的鏡子。桌上攤開一份未填完的病史問診表，筆尖還是濕的。",
+      (_player, _world) => "診療床、血壓計、一面照不出你完整身影的鏡子。桌上攤開一份未填完的病史問診表，筆尖還是濕的。",
     adjacentLocations: ["nurse_station", "records_room"],
     actions: [
       {
@@ -210,7 +210,7 @@ export const SCENARIO_LOCATIONS: Record<string, LocationData> = {
       {
         id: "finish_the_form",
         label: "拿起濕筆，把表填完",
-        condition: "player.discoveredClues.includes('問診表：此人否認曾經死亡，仍須留觀')",
+        condition: (p, w) => p.discoveredClues.includes('問診表：此人否認曾經死亡，仍須留觀'),
         resultText:
           "你才簽上名，最後一欄自動浮現一行你沒寫的字：『同意』。墨水滲進紙裡，像滲進皮膚。",
         effects: [
@@ -227,7 +227,7 @@ export const SCENARIO_LOCATIONS: Record<string, LocationData> = {
     id: "records_room",
     name: "病歷室",
     description:
-      "一整面牆的鐵櫃，按收治日期排列。最新一格的日期是『明天』。空氣裡有冷氣與舊紙張的味道。",
+      (_player, _world) => "一整面牆的鐵櫃，按收治日期排列。最新一格的日期是『明天』。空氣裡有冷氣與舊紙張的味道。",
     adjacentLocations: ["corridor_b", "exam_room_3", "stairwell"],
     actions: [
       {
@@ -245,7 +245,7 @@ export const SCENARIO_LOCATIONS: Record<string, LocationData> = {
       {
         id: "find_patient_note",
         label: "搜尋夾在舊病歷間的紙條",
-        condition: "!player.foundSheets.includes('previous_note')",
+        condition: (p, w) => !p.foundSheets.includes('previous_note'),
         resultText:
           "一張皺折的紙條從病歷夾滑落，字跡潦草急促，落款只寫著『靠窗床，前一位』。",
         effects: [
@@ -273,7 +273,7 @@ export const SCENARIO_LOCATIONS: Record<string, LocationData> = {
     id: "stairwell",
     name: "後棟樓梯間",
     description:
-      "通往地下與頂樓的水泥樓梯。感應燈只在你『往下走』時亮起，往上時始終是暗的。",
+      (_player, _world) => "通往地下與頂樓的水泥樓梯。感應燈只在你『往下走』時亮起，往上時始終是暗的。",
     adjacentLocations: ["corridor_b", "records_room", "morning_exit"],
     actions: [
       {
@@ -303,7 +303,7 @@ export const SCENARIO_LOCATIONS: Record<string, LocationData> = {
       {
         id: "wait_on_landing",
         label: "在樓梯平台上等天亮",
-        condition: "player.timeMinutes < 1860",
+        condition: (p, w) => p.timeMinutes < 1860,
         resultText:
           "你蜷在冰冷的平台。每過幾分鐘，下方就傳來一次腳步聲，停在你看不見的轉角，再退回去。",
         effects: [
@@ -319,7 +319,7 @@ export const SCENARIO_LOCATIONS: Record<string, LocationData> = {
     id: "morning_exit",
     name: "一樓大門前廳",
     description:
-      "玻璃自動門外是停車場與漸亮的天色。門上貼著『出院請至批價櫃台』的指示，但櫃台空無一人。",
+      (_player, _world) => "玻璃自動門外是停車場與漸亮的天色。門上貼著『出院請至批價櫃台』的指示，但櫃台空無一人。",
     adjacentLocations: ["triage_desk", "stairwell"],
     actions: [
       {
@@ -337,7 +337,7 @@ export const SCENARIO_LOCATIONS: Record<string, LocationData> = {
       {
         id: "wait_for_seven",
         label: "在前廳等到七點",
-        condition: "player.timeMinutes < 1860",
+        condition: (p, w) => p.timeMinutes < 1860,
         resultText:
           "你看著門上反鎖的綠燈，數著手機的秒。天色一點點亮，廳裡的影子卻一點點不肯退。",
         effects: [
@@ -348,7 +348,7 @@ export const SCENARIO_LOCATIONS: Record<string, LocationData> = {
       {
         id: "leave_after_seven",
         label: "七點後推門離開",
-        condition: "player.timeMinutes >= 1860",
+        condition: (p, w) => p.timeMinutes >= 1860,
         resultText:
           "七點整，門鎖『喀』地彈開。晨光罩上來的瞬間，你聽見背後監視器的波形——終於拉成一直線。",
         effects: [

@@ -1,4 +1,4 @@
-import type { RuleSheet } from "./types";
+import type {  RuleSheet  } from "@/lib/ruleSheets";
 
 export const SCENARIO_RULE_SHEETS: Record<string, RuleSheet> = {
   doc_official_observation_guide: {

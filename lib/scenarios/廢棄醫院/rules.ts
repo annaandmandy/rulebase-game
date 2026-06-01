@@ -1,4 +1,4 @@
-import { PlayerState, WorldState } from "./types";
+import type {  PlayerState, WorldState  } from "@/types/game";
 
 export type RuleEntry = {
   number: number;

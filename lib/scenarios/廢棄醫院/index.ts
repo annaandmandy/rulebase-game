@@ -4,15 +4,10 @@ import { SCENARIO_RULE_SHEETS } from "./ruleSheets";
 import { checkScenarioEnding } from "./endings";
 import { SCENARIO_DIALOGUES } from "./dialogues";
 import { SCENARIO_LOCATIONS } from "./locationActions";
-import type {
-  PlayerState,
-  WorldState,
-  GameEvent,
-  GameEnding,
-  Dialogue,
-  RuleSheet,
-  LocationData,
-} from "./types";
+import type { PlayerState, WorldState, GameEvent, GameEnding } from "@/types/game";
+import type { LocationData } from "@/types/scenario";
+import type { Dialogue } from "@/types/dialogue";
+import type { RuleSheet } from "@/lib/ruleSheets";
 
 // 遊戲開始時間：深夜 23:07 = 1387 分鐘
 const START_MINUTES = 1387;
@@ -26,35 +21,47 @@ export type ScenarioPack = {
   startMinutes: number;
   initialPlayer: PlayerState;
   initialWorld: WorldState;
-  locations: LocationData[];
+  locations: Record<string, LocationData>;
   events: GameEvent[];
-  dialogues: Dialogue[];
-  ruleSheets: RuleSheet[];
-  getRules: (player: PlayerState, world: WorldState) => string[];
+  dialogues: Record<string, Dialogue>;
+  ruleSheets: Record<string, RuleSheet>;
+  getRules: (player: PlayerState, world: WorldState) => import("@/lib/rules").RuleEntry[];
   checkEnding: (player: PlayerState, world: WorldState) => GameEnding | null;
 };
 
-const initialPlayer: PlayerState = {
+const initialPlayer = {
   currentLocation: "triage_desk",
   timeMinutes: START_MINUTES,
   sanity: 100,
   suspicion: 0,
-  foundSheets: [],
-  discoveredClues: [],
-  logs: [
-    {
-      time: "23:07",
-      text: "你在一陣消毒水氣味中醒來。掛號單上印著你的名字，墨水還沒乾透。",
-    },
-  ],
-};
+  hasRoomKey: false,
+  openedWindow: false,
+  answeredKnock: false,
+  enteredBasement: false,
+  ateEggs: false,
+  sawDuplicateGuest: false,
+  hasReadExtraRule: false,
+  foundSheets: [] as string[],
+  phoneAnswered: false,
+  heardName: false,
+  wardrobeOpened: false,
+  foundPreviousNote: false,
+  talkedToChild: false,
+  eggVerificationDone: false,
+  knewTooMuch: false,
+  discoveredClues: [] as string[],
+  endingsUnlocked: [] as string[],
+} as PlayerState;
 
-const initialWorld: WorldState = {
+const initialWorld = {
+  fogDensity: 80,
   hotelRealityStability: 100,
-  anomalyAttention: 0,
+  elevatorState: "normal" as const,
+  staffMode: "normal" as const,
+  room304State: "safe" as const,
   ruleNoticeVersion: 1,
-  staffMode: "normal",
-};
+  anomalyAttention: 0,
+} as WorldState;
 
 export const SCENARIO_PACK: ScenarioPack = {
   id: "night_observation_protocol",

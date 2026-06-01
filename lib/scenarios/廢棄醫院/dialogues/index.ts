@@ -1,4 +1,4 @@
-import type { Dialogue } from "../types";
+import type { Dialogue } from "@/types/dialogue";
 
 export const SCENARIO_DIALOGUES: Record<string, Dialogue> = {
   night_nurse_dialogue: {
@@ -24,19 +24,19 @@ export const SCENARIO_DIALOGUES: Record<string, Dialogue> = {
           {
             id: "m5",
             label: "問問護理師林",
-            condition: "player.foundSheets.includes('doc_staff_handover_memo')",
+            condition: (p, w, m) => p.foundSheets.includes('doc_staff_handover_memo'),
             next: "confront_nurse",
           },
           {
             id: "m6",
             label: "交班廣播是什麼",
-            condition: "player.foundSheets.includes('doc_previous_patient_note')",
+            condition: (p, w, m) => p.foundSheets.includes('doc_previous_patient_note'),
             next: "topic_broadcast",
           },
           {
             id: "m7",
             label: "作廢病歷的事",
-            condition: "player.foundSheets.includes('doc_records_label')",
+            condition: (p, w, m) => p.foundSheets.includes('doc_records_label'),
             next: "confront_records",
           },
           { id: "m8", label: "先這樣，謝謝", next: "farewell" },
@@ -50,7 +50,7 @@ export const SCENARIO_DIALOGUES: Record<string, Dialogue> = {
           {
             id: "p2",
             label: "我可以不填病史嗎",
-            condition: "player.foundSheets.includes('doc_previous_patient_note')",
+            condition: (p, w, m) => p.foundSheets.includes('doc_previous_patient_note'),
             next: "topic_refuse_form",
           },
           { id: "p3", label: "回上一頁", next: "main_menu" },
@@ -209,25 +209,25 @@ export const SCENARIO_DIALOGUES: Record<string, Dialogue> = {
           {
             id: "c_prevnote",
             label: "前任的紙條說…",
-            condition: "player.foundSheets.includes('doc_previous_patient_note')",
+            condition: (p, w, m) => p.foundSheets.includes('doc_previous_patient_note'),
             next: "confront_prevnote",
           },
           {
             id: "c_memo",
             label: "交班備忘錄寫…",
-            condition: "player.foundSheets.includes('doc_staff_handover_memo')",
+            condition: (p, w, m) => p.foundSheets.includes('doc_staff_handover_memo'),
             next: "confront_memo",
           },
           {
             id: "c_records",
             label: "病歷室標籤上…",
-            condition: "player.foundSheets.includes('doc_records_label')",
+            condition: (p, w, m) => p.foundSheets.includes('doc_records_label'),
             next: "confront_records",
           },
           {
             id: "c_official",
             label: "留觀須知寫…",
-            condition: "player.foundSheets.includes('doc_official_observation_guide')",
+            condition: (p, w, m) => p.foundSheets.includes('doc_official_observation_guide'),
             next: "confront_official",
           },
           { id: "leave", label: "我先回床位", next: "end" },
@@ -245,7 +245,7 @@ export const SCENARIO_DIALOGUES: Record<string, Dialogue> = {
           {
             id: "what_count",
             label: "核對什麼人數",
-            condition: "player.foundSheets.includes('doc_previous_patient_note')",
+            condition: (p, w, m) => p.foundSheets.includes('doc_previous_patient_note'),
             next: "confront_prevnote",
           },
           { id: "back", label: "我知道了", next: "main_menu" },
@@ -271,7 +271,7 @@ export const SCENARIO_DIALOGUES: Record<string, Dialogue> = {
           {
             id: "upstairs",
             label: "樓上的燈怎麼了",
-            condition: "player.foundSheets.includes('doc_previous_patient_note')",
+            condition: (p, w, m) => p.foundSheets.includes('doc_previous_patient_note'),
             next: "confront_prevnote",
           },
           { id: "back", label: "好，不問了", next: "main_menu" },

@@ -3,7 +3,6 @@ import { PlayerState, WorldState, Effect } from "./game";
 export type DialogueMemory = Record<string, boolean | number | string>;
 
 export type DialogueScene = {
-  id: string;
   // NPC speaks first
   npcText:
     | string
@@ -23,7 +22,7 @@ export type DialogueChoice = {
 export type Dialogue = {
   id: string;
   npcName: string;
-  location: string; // which location this dialogue is for
+  location?: string;
   scenes: Record<string, DialogueScene>;
   startScene: string;
 };

@@ -3,7 +3,7 @@ export type RuleSheet = {
   title: string;
   subtitle?: string;
   lines: string[];
-  source: "hotel" | "previous_guest" | "staff" | "unknown";
+  source: "hotel" | "official" | "previous_guest" | "previous_occupant" | "staff" | "unknown";
 };
 
 export const RULE_SHEETS: Record<string, RuleSheet> = {

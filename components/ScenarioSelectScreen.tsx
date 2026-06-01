@@ -4,6 +4,7 @@ import { useGameStore } from "@/lib/gameState";
 import { ALL_SCENARIOS } from "@/lib/scenarioRegistry";
 import { ScenarioPack } from "@/types/scenario";
 import { motion } from "framer-motion";
+import Link from "next/link";
 
 export function ScenarioSelectScreen() {
   const { selectScenario } = useGameStore();
@@ -40,6 +41,15 @@ export function ScenarioSelectScreen() {
 
         <div className="text-center text-xs text-neutral-800">
           每個劇本約需 20-30 分鐘 · 建議在安靜的環境中遊玩
+        </div>
+
+        <div className="text-center">
+          <Link
+            href="/generate"
+            className="text-xs text-neutral-800 hover:text-neutral-600 transition-colors border border-neutral-900 px-4 py-2 inline-block"
+          >
+            + 生成新劇本
+          </Link>
         </div>
       </motion.div>
     </div>
