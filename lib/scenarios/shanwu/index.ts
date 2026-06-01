@@ -47,6 +47,7 @@ export const SHANWU_SCENARIO: ScenarioPack = {
   nameEn: "The Mist Hotel",
   tagline: "深夜‧山中‧霧",
   description: "你在深夜抵達這間旅館。手機沒有訊號。規則說這裡很安全。\n\n但規則到底是在保護你，還是在引導你走向某個地方？",
+  ruleNoticeTitle: "住客安全須知",
 
   initialPlayer: INITIAL_PLAYER,
   initialWorld: INITIAL_WORLD,

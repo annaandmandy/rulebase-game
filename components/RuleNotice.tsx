@@ -29,6 +29,13 @@ export function RuleNotice() {
     .map((id) => sheetSource[id])
     .filter(Boolean);
 
+  // Dynamic source label — "hotel" shows the scenario's own name
+  const sourceLabels: Record<string, string> = {
+    ...SOURCE_LABELS,
+    hotel: selectedScenario?.name ?? "山霧旅館",
+    official: selectedScenario?.name ?? "山霧旅館",
+  };
+
   return (
     <div className="flex flex-col h-full p-3 gap-3">
       {/* Main safety notice */}
@@ -44,9 +51,9 @@ export function RuleNotice() {
         }}
       >
         <div className="text-center text-amber-200/50 mb-3 text-xs border-b border-amber-200/10 pb-2">
-          山霧旅館
+          {selectedScenario?.name ?? "山霧旅館"}
           <br />
-          住客安全須知
+          {selectedScenario?.ruleNoticeTitle ?? "住客安全須知"}
         </div>
         <ol className="flex flex-col gap-2.5 list-none">
           {rules.map((rule, i) => {
@@ -90,7 +97,7 @@ export function RuleNotice() {
           }}
         >
           <div className="text-center mb-2 pb-2 border-b border-current/10 opacity-60">
-            {SOURCE_LABELS[sheet.source]}
+            {sourceLabels[sheet.source] ?? sheet.source}
             <br />
             {sheet.title}
             {sheet.subtitle && (

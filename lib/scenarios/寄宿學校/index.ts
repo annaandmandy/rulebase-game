@@ -66,6 +66,7 @@ const initialWorld = {
 export const SCENARIO_PACK: ScenarioPack = {
   id: "night_roll_call",
   name: "夜讀生點名簿",
+  ruleNoticeTitle: "夜間住宿須知",
   nameEn: "The Night Roll Call",
   tagline: "熄燈後，宿舍的人數永遠要對得上——多一個，或少一個，都不行。",
   description:

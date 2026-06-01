@@ -50,6 +50,7 @@ const initialWorld = {
 export const SCENARIO_PACK: ScenarioPack = {
   id: "night_observation_protocol",
   name: "夜間留觀須知",
+  ruleNoticeTitle: "留觀患者安全說明",
   nameEn: "Night Observation Protocol",
   tagline: "你只是來夜間留觀，天亮就能出院——如果你還算是病患的話。",
   description:

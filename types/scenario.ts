@@ -18,6 +18,7 @@ export type ScenarioPack = {
   nameEn?: string;
   tagline: string;
   description: string;
+  ruleNoticeTitle?: string; // title shown in the rules panel, e.g. "住客安全須知" / "夜間住宿須知"
 
   initialPlayer: Omit<PlayerState, "logs">;
   initialWorld: WorldState;
