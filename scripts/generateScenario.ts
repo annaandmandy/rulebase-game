@@ -31,8 +31,7 @@ const PROJECT_ROOT = join(__dirname, "..");
 
 // ─── CLI Args ────────────────────────────────────────────────────────────────
 
-const [, , theme = "廢棄醫院", ...keywordArgs] = process.argv;
-const keywords = keywordArgs.join(" ") || "isolation liminal clinical";
+const [, , theme = "廢棄醫院"] = process.argv;
 const slug = theme.replace(/\s+/g, "_").replace(/[^\w一-鿿]/g, "");
 
 // ─── Shared Cached Context ───────────────────────────────────────────────────
@@ -280,7 +279,13 @@ async function runConceiver(client: Anthropic): Promise<ConceptOutput> {
 為以下主題設計一個規則怪談遊戲場景：
 
 主題：${theme}
-關鍵字：${keywords}
+
+（請根據主題自行判斷最適合的恐怖風格。例如：
+  - 醫院/療養院 → clinical isolation protocol horror
+  - 學校/宿舍 → institutional surveillance rules dormitory
+  - 辦公大樓 → corporate bureaucratic liminal overtime
+  - 旅館/民宿 → mountain isolation uncanny rural
+  以此類推，不需要使用者告訴你）
 
 設計要求：
 - 場景應該「幾乎正常」，恐怖來自微小錯誤和規則矛盾
@@ -1142,7 +1147,6 @@ async function main() {
 
   console.log(`\n🎭 山霧旅館 — 劇本生成器`);
   console.log(`   主題：${theme}`);
-  console.log(`   關鍵字：${keywords}`);
   console.log(`   輸出：lib/scenarios/${finalSlug}/`);
   console.log(`\n   Pipeline：概念師 → 規則師(2a+2b) → 協調師(2c) → [事件師 ‖ 對話師] → 結局師 → 程式碼師 → 驗證師\n`);
 

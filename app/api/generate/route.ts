@@ -22,9 +22,8 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const { theme, keywords, apiKey } = await request.json() as {
+  const { theme, apiKey } = await request.json() as {
     theme: string;
-    keywords: string;
     apiKey: string;
   };
 
@@ -49,7 +48,7 @@ export async function POST(request: Request) {
 
       const proc = spawn(
         "npx",
-        ["tsx", scriptPath, theme, ...(keywords ? [keywords] : [])],
+        ["tsx", scriptPath, theme],
         {
           cwd: projectRoot,
           env: { ...process.env, ANTHROPIC_API_KEY: apiKey, FORCE_COLOR: "0" },

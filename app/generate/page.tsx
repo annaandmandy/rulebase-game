@@ -10,7 +10,6 @@ export default function GeneratePage() {
   const { generationJob, setGenerationJob, appendGenerationLog } = useGameStore();
 
   const [theme, setTheme] = useState("");
-  const [keywords, setKeywords] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [addStatus, setAddStatus] = useState<AddStatus>("idle");
   const [addMessage, setAddMessage] = useState("");
@@ -34,7 +33,7 @@ export default function GeneratePage() {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ theme: theme.trim(), keywords: keywords.trim(), apiKey: apiKey.trim() }),
+        body: JSON.stringify({ theme: theme.trim(), apiKey: apiKey.trim() }),
       });
 
       if (!res.ok || !res.body) {
@@ -139,17 +138,6 @@ export default function GeneratePage() {
               value={theme}
               onChange={(e) => setTheme(e.target.value)}
               placeholder="寄宿學校、深夜辦公大樓…"
-              disabled={isRunning}
-              className="w-full bg-neutral-900 border border-neutral-800 text-neutral-300 text-sm px-3 py-2 focus:outline-none focus:border-neutral-600 placeholder-neutral-700 disabled:opacity-50"
-            />
-          </Field>
-
-          <Field label="風格關鍵字（選填）">
-            <input
-              type="text"
-              value={keywords}
-              onChange={(e) => setKeywords(e.target.value)}
-              placeholder="institutional dormitory surveillance…"
               disabled={isRunning}
               className="w-full bg-neutral-900 border border-neutral-800 text-neutral-300 text-sm px-3 py-2 focus:outline-none focus:border-neutral-600 placeholder-neutral-700 disabled:opacity-50"
             />
