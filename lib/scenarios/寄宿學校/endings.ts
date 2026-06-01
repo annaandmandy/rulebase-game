@@ -1,0 +1,104 @@
+import type { PlayerState, WorldState, GameEnding } from "@/types/game";
+
+// 遊戲開始時間：深夜 21:43 = 1303 分鐘
+// 次日清晨 06:00 = 1303 + (24*60 - 1303) + 360... 此處結局僅依旗標判定，時間註記保留
+export const SCENARIO_START_MINUTES = 1303;
+export const MORNING_SIX = SCENARIO_START_MINUTES + ((24 * 60 - SCENARIO_START_MINUTES) + 6 * 60);
+
+type EndingDef = {
+  id: string;
+  title: string;
+  text: string;
+  condition: (player: PlayerState, world: WorldState) => boolean;
+};
+
+const endings: EndingDef[] = [
+  {
+    id: "ending_uncounted_survivor",
+    title: "數不到的人",
+    condition: (player, world) =>
+      (player as any).flags?.neverAnswered === true &&
+      (player as any).flags?.neverRegistered === true &&
+      player.foundSheets.includes("event_night_rollcall_done") &&
+      player.foundSheets.includes("event_morning_bell_done") &&
+      !(player as any).flags?.answeredRollcall &&
+      !(player as any).flags?.registeredAtOffice,
+    text:
+      "你整夜縮在床位最深的陰影裡。\n\n舍監的腳步停在你門外，念出一個名字——不是你的，卻又像是你的。你把舌頭抵在牙後，沒有答有，也沒有答無。喉嚨裡那聲「有」始終沒有離開你。\n\n點名簿在走廊另一端被翻動，紙頁的聲音持續了很久，比任何一夜都久。然後是長長的沉默，像有人在數，數到一半發現少了一格，又從頭數起。\n\n清晨六點，起床鈴響了。光線爬進房間，照在對床那條始終沒有人睡過、卻平整鋪好的棉被上。\n\n你活著走出北棟。學務處的人核對名單時皺了皺眉，說查不到你今晚的住宿紀錄——大概是系統漏登了，沒關係，補一筆就好。\n\n你連忙說不用了，謝謝。\n\n你不再屬於任何一張名單，這讓你終於安全。只是從那天起，每次有人在背後喊你的名字，你都要過很久，才敢確定那是叫你。\n\n而你始終沒有問：昨晚那個被念到、卻沒有人應答的名字，最後補進了誰。",
+  },
+  {
+    id: "ending_taken_by_rollcall",
+    title: "答到的那一個",
+    condition: (player, world) =>
+      (player as any).flags?.answeredRollcall === true &&
+      player.foundSheets.includes("event_night_rollcall_done"),
+    text:
+      "你聽見自己的名字，於是照規則清楚地答了「有」。\n\n聲音才出口，你就覺得不對。走廊裡的腳步沒有走遠，反而朝你的房門靠近，一步、一步，平穩得像在核對一個早已確定的答案。\n\n舍監沒有開門。他只是在門外，把你的名字從一欄，輕輕劃到另一欄。你聽見筆尖劃過紙面的聲音，短短一道，像替誰結清了一筆三十年的舊帳。\n\n「到齊了。」他在門外說，語氣是滿意的，「今晚剛好。」\n\n你想喊，想說你還在這裡，你明明答了有。可是你忽然明白——正因為你答了有，他們才知道，今晚有一個人，是數得到、也帶得走的。\n\n天亮後，宿舍恢復了應有的安靜。名冊上的人數一個不多，一個不少，三十年來頭一次完全對上。\n\n你的床位重新鋪平，棉被疊得整整齊齊，等著下一個會在黑暗裡乖乖答「有」的人。",
+  },
+  {
+    id: "ending_register_trap",
+    title: "被移欄的姓名",
+    condition: (player, world) =>
+      (player as any).flags?.registeredAtOffice === true &&
+      (player as any).flags?.wardenLookedUp === true &&
+      player.foundSheets.includes("event_duty_office_register_done"),
+    text:
+      "你照著須知第五條走進值班室。遇到疑慮，就該尋求協助——他們是這麼寫的。\n\n值班舍監低著頭，把一本厚冊推到你面前，要你寫下姓名、學號、床位。你寫的時候，筆有點抖。寫完，他沒有立刻收回去。\n\n他抬起頭，看了你一眼。\n\n就那麼一眼。你後頸的寒毛全立了起來，卻不明白為什麼——直到你想起前任住客紙條角落那行被劃掉又補上的字：他抬頭看你的時候，你的名字已經不在原來那一欄了。\n\n「核對完成。」他闔上冊子，微笑，「你的在校身分，沒有問題。」\n\n你逃也似地離開值班室，一路跑回房間，反鎖房門。直到天亮你才敢確認——你還在，手還是手，名字還叫得出來。\n\n你以為你逃過了。\n\n可是那本冊子上，你親手寫下的那一行，墨跡正在很慢很慢地，往「需補足」的欄位裡滑過去。等它滑到底的那一夜，舍監就不必再挑人了。\n\n他已經有了你的簽名。",
+  },
+  {
+    id: "ending_board_補入",
+    title: "牌上多出的一人",
+    condition: (player, world) =>
+      (player as any).flags?.changedAttendanceBoard === true &&
+      player.foundSheets.includes("event_attendance_board_done"),
+    text:
+      "戴口罩的夜讀生說得那麼篤定：多出來那一個不是你，把數字改回去，今晚就平安。\n\n你信了。你伸手把出席人數牌上的數字撥小了一格。喀的一聲，木牌歸位。\n\n那一刻，自習室裡所有低頭夜讀的人，同時停下了筆。\n\n你這才看清——他們的桌上沒有書，學號牌上沒有號碼，臉在燈下白得像沒有完全顯影的相片。戴口罩的那個轉過頭，口罩底下的笑意一直延伸到不該延伸的地方。\n\n「謝謝你。」他說，「我們等這一格，等很久了。」\n\n你想把數字改回來，手卻穿過了木牌。你低頭，發現自己的學號牌不知何時掛上了胸前，上面的號碼你從未見過，卻覺得無比熟悉——那是三十年前的編號。\n\n出席人數牌上的數字，自己跳回了原來的位置。\n\n一個不多，一個不少。\n\n從今以後每晚，都會有新來的學生路過自習室，看見一排低頭夜讀的人。其中最靠門的那一個，會抬起頭，輕聲告訴他：把數字改回去就好。",
+  },
+  {
+    id: "ending_waiting_forever",
+    title: "鈴不會響",
+    condition: (player, world) =>
+      (player as any).flags?.stayedAndWaited === true &&
+      player.foundSheets.includes("event_morning_bell_done") &&
+      !(player as any).flags?.neverAnswered,
+    text:
+      "清晨六點，起床鈴沒有響。\n\n須知第八條寫得很清楚：鈴未響，表示昨夜核對尚未完成，請留在原地等候舍監再次點名。你是個守規矩的人，於是你留在床上，等。\n\n窗外的天色亮到一個程度，就停住了，像一張曝光過度卻沖洗不完的底片。你看著手錶，秒針走到六點零一分，停了。再看一次，還是六點零一分。\n\n你聽見走廊上有腳步聲，一遍一遍經過你的門，念著一串名字。你仔細聽，想等到自己的名字好答「有」，好讓這一夜趕快結束。\n\n可是名單念了一輪又一輪，從來沒有你。\n\n你忽然懂了——昨夜你既沒答有，也沒答無，於是核對永遠湊不齊那個數。制度不會放你走，因為帳面還差一個人；制度也帶不走你，因為你不在任何一欄。\n\n你卡在六點零一分，等一個永遠不會響的鈴。\n\n而那扇門外，舍監仍在一遍遍點名。他也在等——等你，終於忍不住，回答其中任何一個名字。",
+  },
+  {
+    id: "ending_seven_truth",
+    title: "三十年前的七個",
+    condition: (player, world) =>
+      (player as any).flags?.knewAllTruth === true &&
+      player.foundSheets.includes("doc_burnt_register_page") &&
+      player.foundSheets.includes("doc_staff_memo") &&
+      player.foundSheets.includes("doc_previous_student_note") &&
+      player.foundSheets.includes("event_rooftop_door_done") &&
+      player.foundSheets.includes("event_morning_bell_done") &&
+      !(player as any).flags?.answeredRollcall &&
+      !(player as any).flags?.registeredAtOffice,
+    text:
+      "你拼齊了所有的紙片。燒焦的點名簿殘頁、員工備忘、前任住客的字條——它們各說了一半的謊，湊起來才是完整的真話。\n\n三十年前那場火，北棟夜讀室死了七個人。校方沒有銷除他們的學籍，因為銷除要寫報告，報告要有人負責。於是七個名字留在名冊上，年復一年，等著每一夜的人數去填平。\n\n所謂點名，從來不是清查誰還活著。是清查——今晚，輪到誰去頂上那七個的其中一個。\n\n你帶著這份明白，爬上西側樓梯，推開那扇本不該開的頂樓鐵門。風灌進來，天邊泛起最初的灰白。你站在三十年前他們站過的地方，沒有答有，沒有登記，沒有更動任何一個數字。你只是站在名冊照不到的地方，看著天亮。\n\n六點，山下傳來別棟的起床鈴。北棟很安靜，安靜得像終於沒有人需要被補上。\n\n你活了下來，帶著一個沒有人會相信的真相。\n\n你曾想過去告訴校方，把那七個名字真正劃掉。可你後來沒有。\n\n因為你算過了——名字一旦劃掉，名冊就會少七個。\n\n而少了的，總得有人補。",
+  },
+];
+
+export function checkScenarioEnding(
+  player: PlayerState,
+  world: WorldState,
+  forcedId?: string
+): GameEnding | null {
+  if (forcedId) {
+    const forced = endings.find((e) => e.id === forcedId);
+    if (forced) {
+      return forced;
+    }
+    return null;
+  }
+
+  for (const ending of endings) {
+    if (ending.condition(player, world)) {
+      return ending;
+    }
+  }
+
+  return null;
+}

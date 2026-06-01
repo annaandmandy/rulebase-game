@@ -1,0 +1,23 @@
+{
+  "valid": false,
+  "issues": [
+    "endingIds 為空，endingPaths 的6個 endingId 皆無對應定義"
+  ],
+  "warnings": [
+    "eventIds 含重複項目（多個事件 ID 重出現）"
+  ],
+  "suggestions": [
+    "補上 ending_uncounted_survivor 等6個結局定義至 endingIds",
+    "清理 eventIds 重複條目以利驗證"
+  ],
+  "rulesCoverage": {
+    "1": true,
+    "2": true,
+    "3": true,
+    "4": true,
+    "5": true,
+    "6": true,
+    "7": true,
+    "8": true
+  }
+}

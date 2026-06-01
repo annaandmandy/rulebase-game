@@ -1,0 +1,297 @@
+{
+  "events": [
+    {
+      "id": "event_night_rollcall",
+      "title": "夜間點名",
+      "trigger": "熄燈後待在床位，舍監進房逐一唱名",
+      "description": "腳步聲在床位間移動，停在你床尾。低沉的聲音唱出你的姓名，等待回答。整間寢室靜得只剩呼吸。",
+      "choices": [
+        {
+          "id": "answer_yes",
+          "label": "清楚答「有」",
+          "resultText": "你的名字被勾起。腳步離開後，你的床鋪空了。",
+          "effects": [
+            {
+              "type": "flag",
+              "key": "answeredRollcall",
+              "value": true
+            },
+            {
+              "type": "sanity",
+              "value": -10
+            },
+            {
+              "type": "ending",
+              "value": "ending_taken_by_rollcall"
+            }
+          ]
+        },
+        {
+          "id": "stay_silent",
+          "label": "屏住呼吸，不出聲",
+          "resultText": "唱名重複三次後停止。它在名冊上記你缺席，離開了。",
+          "effects": [
+            {
+              "type": "flag",
+              "key": "neverAnswered",
+              "value": true
+            },
+            {
+              "type": "sanity",
+              "value": -15
+            },
+            {
+              "type": "anomaly",
+              "value": 2
+            }
+          ]
+        }
+      ],
+      "once": true
+    },
+    {
+      "id": "event_hallway_name_call",
+      "title": "走廊喊名",
+      "trigger": "非點名時段，於走廊聽見有人呼喚你的姓名",
+      "description": "走廊盡頭沒有人，卻有聲音清楚喚著你的名字，一聲比一聲近。這不是點名時段。",
+      "choices": [
+        {
+          "id": "reply",
+          "label": "回應一聲「我在」",
+          "resultText": "聲音瞬間停在耳邊。你被當作答到的人帶走。",
+          "effects": [
+            {
+              "type": "flag",
+              "key": "answeredRollcall",
+              "value": true
+            },
+            {
+              "type": "sanity",
+              "value": -20
+            }
+          ]
+        },
+        {
+          "id": "walk_on",
+          "label": "不回應，加快腳步前行",
+          "resultText": "你越走越快。背後的呼喚把你算進了今晚的缺額。",
+          "effects": [
+            {
+              "type": "anomaly",
+              "value": 2
+            },
+            {
+              "type": "sanity",
+              "value": -10
+            }
+          ]
+        },
+        {
+          "id": "stand_still",
+          "label": "停下，沉默不動也不前進",
+          "resultText": "你閉眼站定。聲音繞著你打轉，最後散去。你還在。",
+          "effects": [
+            {
+              "type": "flag",
+              "key": "neverAnswered",
+              "value": true
+            },
+            {
+              "type": "sheet",
+              "value": "doc_previous_student_note"
+            }
+          ]
+        }
+      ],
+      "once": true
+    },
+    {
+      "id": "event_attendance_board",
+      "title": "出席人數牌",
+      "trigger": "進入夜讀自習室，發現出席牌數字與在場人數不符",
+      "description": "自習室空無一人，出席牌卻寫著「7」。員工備忘提過：缺額需有人補足。你的手停在牌前。",
+      "choices": [
+        {
+          "id": "change_number",
+          "label": "把數字改成正確的人數",
+          "resultText": "牌一翻動，你的名字浮上備忘錄，成為被補入的多餘一人。",
+          "effects": [
+            {
+              "type": "flag",
+              "key": "changedAttendanceBoard",
+              "value": true
+            },
+            {
+              "type": "sanity",
+              "value": -15
+            },
+            {
+              "type": "ending",
+              "value": "ending_board_補入"
+            }
+          ]
+        },
+        {
+          "id": "leave_board",
+          "label": "不碰牌，安靜離開",
+          "resultText": "你退出自習室。今晚的核對，沒有把你算進去。",
+          "effects": [
+            {
+              "type": "sheet",
+              "value": "doc_staff_memo"
+            },
+            {
+              "type": "anomaly",
+              "value": 1
+            }
+          ]
+        }
+      ],
+      "once": true
+    },
+    {
+      "id": "event_duty_office_register",
+      "title": "值班室登記",
+      "trigger": "心生疑慮，依規則前往舍監值班室登記身分",
+      "description": "值班室燈亮著。舍監低頭翻著名冊，沒抬眼，只把登記本推向你：「寫上名字，我替你核對在校身分。」",
+      "choices": [
+        {
+          "id": "register",
+          "label": "簽下姓名，請求核對",
+          "resultText": "舍監緩緩抬頭，瞳孔對準你。「找到了。」名字從名冊被移走。",
+          "effects": [
+            {
+              "type": "flag",
+              "key": "registeredAtOffice",
+              "value": true
+            },
+            {
+              "type": "flag",
+              "key": "wardenLookedUp",
+              "value": true
+            },
+            {
+              "type": "sanity",
+              "value": -15
+            },
+            {
+              "type": "ending",
+              "value": "ending_register_trap"
+            }
+          ]
+        },
+        {
+          "id": "leave_office",
+          "label": "藉口退出，不登記",
+          "resultText": "你縮回手退出門外。舍監始終沒抬頭。你的身分仍是空白。",
+          "effects": [
+            {
+              "type": "flag",
+              "key": "neverRegistered",
+              "value": true
+            },
+            {
+              "type": "sheet",
+              "value": "doc_staff_memo"
+            }
+          ]
+        }
+      ],
+      "once": true
+    },
+    {
+      "id": "event_rooftop_door",
+      "title": "頂樓鐵門",
+      "trigger": "熄燈後抵達西側樓梯間頂端，面對封閉的頂樓鐵門",
+      "description": "鐵門上掛著三十年前的封條。門縫透出焦味。你想起燒毀的名冊上，那七個答到後再也走不出去的名字。",
+      "choices": [
+        {
+          "id": "open_door",
+          "label": "撕開封條，推開鐵門",
+          "resultText": "焦黑的天台上排著七個身影，全在等點名。你終於懂了一切。",
+          "effects": [
+            {
+              "type": "flag",
+              "key": "knewAllTruth",
+              "value": true
+            },
+            {
+              "type": "sheet",
+              "value": "doc_burnt_register_page"
+            },
+            {
+              "type": "sanity",
+              "value": -20
+            }
+          ]
+        },
+        {
+          "id": "leave_door",
+          "label": "不開門，退回樓梯",
+          "resultText": "你放開把手。焦味卻一路跟著你下樓。",
+          "effects": [
+            {
+              "type": "anomaly",
+              "value": 2
+            },
+            {
+              "type": "sanity",
+              "value": -8
+            }
+          ]
+        }
+      ],
+      "once": true
+    },
+    {
+      "id": "event_morning_bell",
+      "title": "鈴未響",
+      "trigger": "時間到清晨六點，起床鈴卻沒有響起",
+      "description": "窗外天色微亮，起床鈴卻沒響。規則寫著：昨夜核對未完成，請留在原地等候舍監再次點名。",
+      "choices": [
+        {
+          "id": "stay_wait",
+          "label": "依規則留在原地等待",
+          "resultText": "你坐著等。日光卡在六點不再前進，鈴永遠不會響。",
+          "effects": [
+            {
+              "type": "flag",
+              "key": "stayedAndWaited",
+              "value": true
+            },
+            {
+              "type": "ending",
+              "value": "ending_waiting_forever"
+            }
+          ],
+          "condition": "未持有 neverAnswered"
+        },
+        {
+          "id": "walk_out_truth",
+          "label": "帶著真相走向校門",
+          "resultText": "你看穿了名冊的把戲，走出大門。身後七個名字目送你離開。",
+          "effects": [
+            {
+              "type": "ending",
+              "value": "ending_seven_truth"
+            }
+          ],
+          "condition": "持有 knewAllTruth 且未答到未登記"
+        },
+        {
+          "id": "leave_uncounted",
+          "label": "不等了，自己走出宿舍",
+          "resultText": "沒人記得你的名字，也沒人能把你點走。你成了數不到的人。",
+          "effects": [
+            {
+              "type": "ending",
+              "value": "ending_uncounted_survivor"
+            }
+          ],
+          "condition": "持有 neverAnswered 且 neverRegistered"
+        }
+      ],
+      "once": true
+    }
+  ]
+}

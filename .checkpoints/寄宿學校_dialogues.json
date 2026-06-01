@@ -1,0 +1,545 @@
+{
+  "dialogues": [
+    {
+      "id": "warden_dialogue",
+      "npcName": "舍監 周老師",
+      "location": "duty_office",
+      "startScene": "greet",
+      "scenes": {
+        "greet": {
+          "npcText": "（筆尖在簿子上停著）名字。報上來，我核對一下你在不在名冊上。今晚的缺額還沒補齊。",
+          "choices": [
+            {
+              "id": "to_menu",
+              "label": "我想問幾件事",
+              "next": "main_menu"
+            },
+            {
+              "id": "ask_name_why",
+              "label": "為什麼說『還沒補齊』？",
+              "next": "ask_quota"
+            }
+          ]
+        },
+        "main_menu": {
+          "npcText": "（沒抬頭）說吧。值班時間我只回答跟住宿登記有關的事。其他的，明早再問。",
+          "choices": [
+            {
+              "id": "q_rollcall",
+              "label": "夜間點名怎麼進行",
+              "next": "ask_rollcall"
+            },
+            {
+              "id": "q_office",
+              "label": "有疑慮要來值班室？",
+              "next": "ask_dutyoffice"
+            },
+            {
+              "id": "q_others",
+              "label": "我對床的同學呢",
+              "next": "ask_privacy"
+            },
+            {
+              "id": "q_restricted",
+              "label": "頂樓鐵門為什麼鎖",
+              "next": "ask_restricted"
+            },
+            {
+              "id": "q_note",
+              "label": "走廊上有人喊我的名字",
+              "condition": "player.foundSheets.includes('doc_previous_student_note')",
+              "next": "confront_note"
+            },
+            {
+              "id": "q_memo",
+              "label": "什麼叫『補足缺額』",
+              "condition": "player.foundSheets.includes('doc_staff_memo')",
+              "next": "confront_memo"
+            },
+            {
+              "id": "q_burnt",
+              "label": "三十年前那場火災",
+              "condition": "player.foundSheets.includes('doc_burnt_register_page')",
+              "next": "confront_burnt"
+            },
+            {
+              "id": "leave",
+              "label": "沒事了",
+              "next": null
+            }
+          ]
+        },
+        "ask_rollcall": {
+          "npcText": "我念到你的姓名，你清楚答『有』。答了，名冊上才有你。沒答到的，視同缺席──缺席的，我得另外處理。",
+          "choices": [
+            {
+              "id": "what_handle",
+              "label": "另外處理是什麼意思",
+              "next": "ask_rollcall_2"
+            },
+            {
+              "id": "back",
+              "label": "（回去）",
+              "next": "main_menu"
+            }
+          ]
+        },
+        "ask_rollcall_2": {
+          "npcText": "（翻頁）缺額要補滿。名冊上空著的格子，今晚一定得有人填進去。你不答，就會有人替你答。",
+          "choices": [
+            {
+              "id": "who_replace",
+              "label": "誰替我答？",
+              "next": "ask_quota"
+            },
+            {
+              "id": "back",
+              "label": "（回去）",
+              "next": "main_menu"
+            }
+          ]
+        },
+        "ask_quota": {
+          "npcText": "（筆停了一下）……三十年來這欄一直缺七個。每晚我都核對，每晚都還差。別問了，答到就好。",
+          "choices": [
+            {
+              "id": "back",
+              "label": "（先離開這話題）",
+              "next": "main_menu"
+            }
+          ]
+        },
+        "ask_dutyoffice": {
+          "npcText": "對。有任何疑慮，來值班室登記，我替你核對在校身分。登記過的人，我抬頭看一眼，就確定你是誰了。",
+          "choices": [
+            {
+              "id": "lookup_risk",
+              "label": "登記有什麼壞處嗎",
+              "next": "ask_dutyoffice_2"
+            },
+            {
+              "id": "back",
+              "label": "（回去）",
+              "next": "main_menu"
+            }
+          ]
+        },
+        "ask_dutyoffice_2": {
+          "npcText": "壞處？登記是為你好。只是──我一抬頭，名字就從這欄移到那欄。移過去的，就由我這邊保管了。",
+          "choices": [
+            {
+              "id": "which_column",
+              "label": "移到哪一欄",
+              "next": "ask_quota"
+            },
+            {
+              "id": "back",
+              "label": "（回去）",
+              "next": "main_menu"
+            }
+          ]
+        },
+        "ask_privacy": {
+          "npcText": "對床？（翻簿子）依規定，我不能告訴你別人的住宿狀況。那床的棉被是疊好的，這我可以講。沒人睡，棉被不會皺。",
+          "choices": [
+            {
+              "id": "but_someone",
+              "label": "可是昨晚有人翻身",
+              "next": "ask_privacy_2"
+            },
+            {
+              "id": "back",
+              "label": "（回去）",
+              "next": "main_menu"
+            }
+          ]
+        },
+        "ask_privacy_2": {
+          "npcText": "（終於停筆，卻沒抬頭）那不是翻身。那是有人在等你也躺下，好讓那格不再算缺席。別看對床。",
+          "choices": [
+            {
+              "id": "back",
+              "label": "（移開視線）",
+              "next": "main_menu"
+            }
+          ]
+        },
+        "ask_restricted": {
+          "npcText": "西側樓梯、頂樓鐵門，熄燈後封閉。非緊急狀況請勿開啟。（頓）那扇門後面，是三十年前沒下來的地方。",
+          "choices": [
+            {
+              "id": "press_rooftop",
+              "label": "誰沒下來？",
+              "next": "ask_quota"
+            },
+            {
+              "id": "back",
+              "label": "（回去）",
+              "next": "main_menu"
+            }
+          ]
+        },
+        "confront_note": {
+          "npcText": "（筆尖一頓）……前一個學生留的紙條？他寫『不答有、不答無』。（聲音平了下來）他現在就坐在你對床。棉被疊得很好。",
+          "choices": [
+            {
+              "id": "so_dont_answer",
+              "label": "那點名我該怎麼辦",
+              "next": "confront_note_2"
+            },
+            {
+              "id": "back",
+              "label": "（退開）",
+              "next": "main_menu"
+            }
+          ]
+        },
+        "confront_note_2": {
+          "npcText": "（第一次微微抬頭，又低下）我念名字時，你聽就好。沉默的人我數不到。數不到的，我帶不走。……這話我不該說。",
+          "choices": [
+            {
+              "id": "back",
+              "label": "（記住了）",
+              "next": "main_menu"
+            }
+          ]
+        },
+        "confront_memo": {
+          "npcText": "（簿子闔上一半）那份備忘錄不該流出去。『補足缺額』是標準程序──夜讀生改了出席牌的數字，那一欄就得有真人填。流程而已。",
+          "choices": [
+            {
+              "id": "who_fills",
+              "label": "真人？哪來的真人",
+              "next": "confront_memo_2"
+            },
+            {
+              "id": "back",
+              "label": "（回去）",
+              "next": "main_menu"
+            }
+          ]
+        },
+        "confront_memo_2": {
+          "npcText": "（停了很久）你。登記過的、答到過的、動過牌子的──都算數。我只負責讓欄位填滿。三十年了，從沒填滿過。",
+          "choices": [
+            {
+              "id": "back",
+              "label": "（不再追問）",
+              "next": "main_menu"
+            }
+          ]
+        },
+        "confront_burnt": {
+          "npcText": "（手指壓住那張焦黑的紙）……七名。火災那夜，點名點到七個答了『有』，卻沒一個走出名冊。我每晚還在念他們。",
+          "choices": [
+            {
+              "id": "are_you_one",
+              "label": "你也是那七個之一？",
+              "next": "confront_burnt_2"
+            },
+            {
+              "id": "back",
+              "label": "（後退一步）",
+              "next": "main_menu"
+            }
+          ]
+        },
+        "confront_burnt_2": {
+          "npcText": "（終於抬起頭。你看不清那張臉）我是負責核對的人。答到的人走不出去，數不到的人才出得去。鈴響前，別答我。",
+          "choices": [
+            {
+              "id": "leave_final",
+              "label": "（轉身離開值班室）",
+              "next": null
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "night_student_dialogue",
+      "npcName": "戴口罩的夜讀生",
+      "location": "night_study_room",
+      "startScene": "greet",
+      "scenes": {
+        "greet": {
+          "npcText": "你也是轉學來的吧？這裡的規矩多，我教你幾招。先說好，別把我登記進去就行。",
+          "choices": [
+            {
+              "id": "g1",
+              "label": "你是誰？",
+              "next": "who_are_you"
+            },
+            {
+              "id": "g2",
+              "label": "為什麼別登記你？",
+              "next": "why_not_register"
+            },
+            {
+              "id": "g3",
+              "label": "我想問些事",
+              "next": "main_menu"
+            }
+          ]
+        },
+        "who_are_you": {
+          "npcText": "我？學號尾數跟你只差一號。名冊上找不到我，因為核對那晚我剛好不在。你懂的。",
+          "choices": [
+            {
+              "id": "w1",
+              "label": "核對是什麼？",
+              "next": "topic_rollcall"
+            },
+            {
+              "id": "w2",
+              "label": "（看他的口罩）",
+              "next": "mask_look"
+            },
+            {
+              "id": "w3",
+              "label": "回到問題",
+              "next": "main_menu"
+            }
+          ]
+        },
+        "mask_look": {
+          "npcText": "別盯著看。霧氣散不掉的東西，戴著比較安心。你也該找個東西遮住答有的嘴。",
+          "choices": [
+            {
+              "id": "m1",
+              "label": "什麼意思？",
+              "next": "main_menu"
+            }
+          ]
+        },
+        "why_not_register": {
+          "npcText": "登記過的人，名字就進了名冊。進去容易，當晚的火……出來就難了。別問太多。",
+          "choices": [
+            {
+              "id": "wn1",
+              "label": "什麼火？",
+              "next": "topic_fire",
+              "condition": "player.foundSheets.includes('doc_burnt_register_page')"
+            },
+            {
+              "id": "wn2",
+              "label": "回到問題",
+              "next": "main_menu"
+            }
+          ]
+        },
+        "main_menu": {
+          "npcText": "想問就快問。熄燈廣播一響，我們的對話就不算數了。",
+          "choices": [
+            {
+              "id": "mm1",
+              "label": "這裡還有別人嗎？",
+              "next": "ask_students"
+            },
+            {
+              "id": "mm2",
+              "label": "夜間點名怎麼回事？",
+              "next": "topic_rollcall",
+              "condition": "player.foundSheets.includes('doc_official_dorm_guide')"
+            },
+            {
+              "id": "mm3",
+              "label": "走廊有人喊我名字",
+              "next": "topic_hallway",
+              "condition": "player.foundSheets.includes('doc_previous_student_note')"
+            },
+            {
+              "id": "mm4",
+              "label": "補足缺額是什麼？",
+              "next": "topic_supplement",
+              "condition": "player.foundSheets.includes('doc_staff_memo')"
+            },
+            {
+              "id": "mm5",
+              "label": "頂樓那扇鐵門",
+              "next": "ask_restricted"
+            },
+            {
+              "id": "mm6",
+              "label": "你到底是什麼",
+              "next": "confront",
+              "condition": "player.foundSheets.includes('doc_burnt_register_page')"
+            },
+            {
+              "id": "mm7",
+              "label": "先這樣",
+              "next": "end"
+            }
+          ]
+        },
+        "ask_students": {
+          "npcText": "別人的事我不能說，這裡有隱私規定。不過你對床那位，棉被一直鼓著，你沒見過他起身吧？",
+          "choices": [
+            {
+              "id": "as1",
+              "label": "對床棉被怎麼了？",
+              "next": "topic_quilt",
+              "condition": "player.foundSheets.includes('doc_previous_student_note')"
+            },
+            {
+              "id": "as2",
+              "label": "回到問題",
+              "next": "main_menu"
+            }
+          ]
+        },
+        "topic_rollcall": {
+          "npcText": "舍監念到名字，答有就好。標準程序，跟值班室登記一樣安全。安全到沒人走得出去。",
+          "choices": [
+            {
+              "id": "tr1",
+              "label": "值班室也要去？",
+              "next": "ask_restricted"
+            },
+            {
+              "id": "tr2",
+              "label": "走得出去？什麼意思",
+              "next": "topic_supplement",
+              "condition": "player.foundSheets.includes('doc_staff_memo')"
+            },
+            {
+              "id": "tr3",
+              "label": "回到問題",
+              "next": "main_menu"
+            }
+          ]
+        },
+        "topic_hallway": {
+          "npcText": "前任那張紙寫得對：走廊喊你，別答有、別答無、也別回頭。答了，你就被算進當晚的數。",
+          "choices": [
+            {
+              "id": "th1",
+              "label": "當晚的數？",
+              "next": "topic_fire",
+              "condition": "player.foundSheets.includes('doc_burnt_register_page')"
+            },
+            {
+              "id": "th2",
+              "label": "回到問題",
+              "next": "main_menu"
+            }
+          ]
+        },
+        "topic_quilt": {
+          "npcText": "那床三十年沒人睡，卻每晚都鼓著。核對時它會答有，補上一個缺額。它很守規矩。",
+          "choices": [
+            {
+              "id": "tq1",
+              "label": "（退一步）",
+              "next": "main_menu"
+            }
+          ]
+        },
+        "topic_supplement": {
+          "npcText": "備忘錄說缺額要補足，這沒錯。只是它沒寫——補進去的，是活人還是名字。你猜呢？",
+          "choices": [
+            {
+              "id": "ts1",
+              "label": "你被補過嗎？",
+              "next": "confront",
+              "condition": "player.foundSheets.includes('doc_burnt_register_page')"
+            },
+            {
+              "id": "ts2",
+              "label": "回到問題",
+              "next": "main_menu"
+            }
+          ]
+        },
+        "topic_fire": {
+          "npcText": "三十年前那場火，缺了七個。名字還在冊上，每晚點名都答有。你說……他們算走了嗎？",
+          "choices": [
+            {
+              "id": "tf1",
+              "label": "你是那七個之一？",
+              "next": "confront"
+            },
+            {
+              "id": "tf2",
+              "label": "回到問題",
+              "next": "main_menu"
+            }
+          ]
+        },
+        "ask_restricted": {
+          "npcText": "頂樓鐵門？熄燈後封了，我沒上去過……大概沒有。值班室更別去，登記了舍監會抬頭看你。",
+          "choices": [
+            {
+              "id": "ar1",
+              "label": "舍監抬頭會怎樣",
+              "next": "ar_warden"
+            },
+            {
+              "id": "ar2",
+              "label": "回到問題",
+              "next": "main_menu"
+            }
+          ]
+        },
+        "ar_warden": {
+          "npcText": "他會把你的姓名，從這一欄，移到那一欄。移過去的，隔天就沒人記得了。包括起床鈴。",
+          "choices": [
+            {
+              "id": "aw1",
+              "label": "回到問題",
+              "next": "main_menu"
+            }
+          ]
+        },
+        "confront": {
+          "npcText": "（口罩下的呼吸停了一拍）……你看了那張燒焦的名冊。第八個位子，一直空著，等人答有。",
+          "choices": [
+            {
+              "id": "c1",
+              "label": "你想讓我答到",
+              "next": "confront_2"
+            },
+            {
+              "id": "c2",
+              "label": "我不會登記，也不答",
+              "setMemory": {
+                "knewAllTruth": true
+              },
+              "next": "confront_safe"
+            }
+          ]
+        },
+        "confront_2": {
+          "npcText": "我只是教你規矩。答不答，是你自己的嘴。鈴響前，名冊上總得湊滿八個，對吧？",
+          "choices": [
+            {
+              "id": "c21",
+              "label": "（後退離開）",
+              "next": "end"
+            }
+          ]
+        },
+        "confront_safe": {
+          "npcText": "……聰明。那就別讓任何人核對到你。我等了三十年，不差再等一個不肯答的人。走吧。",
+          "choices": [
+            {
+              "id": "cs1",
+              "label": "離開",
+              "next": "end"
+            }
+          ]
+        },
+        "end": {
+          "npcText": "記住，熄燈後我們沒說過話。名冊上，本來就沒有我。",
+          "choices": [
+            {
+              "id": "e1",
+              "label": "離開夜讀室",
+              "next": null
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

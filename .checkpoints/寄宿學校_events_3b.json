@@ -1,0 +1,200 @@
+{
+  "events": [
+    {
+      "id": "event_attendance_board",
+      "title": "出席人數牌",
+      "trigger": "玩家進入 study_hall 並查看出席人數牌",
+      "description": "夜讀自習室空無一人，牌上「出席人數」寫著「6」，但你數了座位，分明只有五個人坐過的痕跡。粉筆擱在溝槽裡，似乎在等你。",
+      "choices": [
+        {
+          "id": "change_number",
+          "label": "把數字改成正確的「5」",
+          "resultText": "你擦掉6寫上5。牌面滲出第六道筆跡：與你同名。",
+          "effects": [
+            {
+              "type": "flag",
+              "key": "changedAttendanceBoard",
+              "value": true
+            },
+            {
+              "type": "sanity",
+              "value": -15
+            },
+            {
+              "type": "anomaly",
+              "value": 2
+            },
+            {
+              "type": "ending",
+              "value": "ending_board_補入"
+            }
+          ]
+        },
+        {
+          "id": "leave_board",
+          "label": "不動牌子，離開",
+          "resultText": "你退出自習室。背後傳來粉筆自行書寫的沙沙聲。",
+          "effects": [
+            {
+              "type": "sanity",
+              "value": -5
+            },
+            {
+              "type": "anomaly",
+              "value": 1
+            }
+          ],
+          "nextLocation": "corridor"
+        },
+        {
+          "id": "read_memo",
+          "label": "翻找講桌下的紙張",
+          "condition": "尚未取得 doc_staff_memo",
+          "resultText": "一張員工備忘錄：『缺額由夜讀生改數字補足，勿讓其察覺。』",
+          "effects": [
+            {
+              "type": "sheet",
+              "value": "doc_staff_memo"
+            },
+            {
+              "type": "sanity",
+              "value": -8
+            }
+          ]
+        }
+      ],
+      "once": true
+    },
+    {
+      "id": "event_duty_office_register",
+      "title": "值班室登記簿",
+      "trigger": "玩家進入 duty_office",
+      "description": "值班室亮著燈，舍監低頭翻著名冊，未抬眼。桌上攤開登記簿，第五條規則說有疑慮應在此登記，核對在校身分。筆尖正對著空白欄。",
+      "choices": [
+        {
+          "id": "register",
+          "label": "寫下姓名登記",
+          "resultText": "舍監緩緩抬頭：『查到了，原來你在這。』他笑了。",
+          "effects": [
+            {
+              "type": "flag",
+              "key": "registeredAtOffice",
+              "value": true
+            },
+            {
+              "type": "flag",
+              "key": "wardenLookedUp",
+              "value": true
+            },
+            {
+              "type": "sanity",
+              "value": -15
+            },
+            {
+              "type": "anomaly",
+              "value": 2
+            },
+            {
+              "type": "ending",
+              "value": "ending_register_trap"
+            }
+          ]
+        },
+        {
+          "id": "refuse_register",
+          "label": "不登記，安靜退出",
+          "resultText": "你縮回手退出。舍監始終沒抬頭，名冊上少了一行。",
+          "effects": [
+            {
+              "type": "flag",
+              "key": "neverRegistered",
+              "value": true
+            },
+            {
+              "type": "sanity",
+              "value": -5
+            }
+          ],
+          "nextLocation": "corridor"
+        },
+        {
+          "id": "peek_register",
+          "label": "偷看名冊內頁",
+          "resultText": "你瞥見三十年前的名單，七個名字被劃掉，墨跡仍濕。",
+          "effects": [
+            {
+              "type": "clue",
+              "value": "三十年前有七名缺額，被劃掉的名字墨跡未乾"
+            },
+            {
+              "type": "sanity",
+              "value": -10
+            }
+          ]
+        }
+      ],
+      "once": true
+    },
+    {
+      "id": "event_bathroom_mirror",
+      "title": "起霧的鏡子",
+      "trigger": "玩家進入 washroom",
+      "description": "盥洗間鏡面蒙著一層霧氣，看不清自己的臉。規則寫著霧氣勿擦、勿在鏡前報數或自言自語。霧裡似乎浮著一行被寫過又擦掉的數字。",
+      "choices": [
+        {
+          "id": "wipe_mirror",
+          "label": "擦掉霧氣看清楚",
+          "resultText": "鏡中映出你身後多站了一人，正張嘴替你報數。",
+          "effects": [
+            {
+              "type": "sanity",
+              "value": -15
+            },
+            {
+              "type": "anomaly",
+              "value": 2
+            },
+            {
+              "type": "world",
+              "key": "hotelRealityStability",
+              "value": -20
+            }
+          ]
+        },
+        {
+          "id": "leave_mirror",
+          "label": "不碰鏡子，轉身離開",
+          "resultText": "你別開視線。霧氣裡的數字無聲地多了一位。",
+          "effects": [
+            {
+              "type": "sanity",
+              "value": -5
+            },
+            {
+              "type": "anomaly",
+              "value": 1
+            }
+          ],
+          "nextLocation": "corridor"
+        },
+        {
+          "id": "listen_memo",
+          "label": "察看洗手台下的字條",
+          "condition": "尚未取得 doc_staff_memo",
+          "resultText": "潮濕的備忘錄：『鏡前報數者會被算成在場，切勿出聲。』",
+          "effects": [
+            {
+              "type": "sheet",
+              "value": "doc_staff_memo"
+            },
+            {
+              "type": "sanity",
+              "value": -8
+            }
+          ]
+        }
+      ],
+      "once": true
+    }
+  ]
+}

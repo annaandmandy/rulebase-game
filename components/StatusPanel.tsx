@@ -1,14 +1,20 @@
 "use client";
 
 import { useGameStore } from "@/lib/gameState";
-import { getLocationName } from "@/lib/locations";
 import { CorruptedText } from "./CorruptedText";
 
 export function StatusPanel() {
-  const { player, world, formatTime } = useGameStore();
+  const { player, world, formatTime, selectedScenario } = useGameStore();
   const timeDisplay = formatTime();
   const corruptLevel = Math.max(0, 10 - Math.floor((world.hotelRealityStability as number) / 10));
-  const locationName = getLocationName(player.currentLocation, world);
+
+  // Use active scenario's location data, fallback to raw ID
+  const loc = selectedScenario?.locations?.[player.currentLocation];
+  const locationName = loc
+    ? ((world.hotelRealityStability as number) < 30 && loc.mutatedName
+        ? loc.mutatedName
+        : loc.name)
+    : player.currentLocation;
 
   const sanityColor =
     player.sanity > 60

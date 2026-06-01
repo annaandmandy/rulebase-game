@@ -1,0 +1,190 @@
+{
+  "events": [
+    {
+      "id": "event_intro_dorm_arrival",
+      "title": "夜讀生報到",
+      "trigger": "玩家首次進入 dorm_room",
+      "description": "你被分配到靠窗的空床。枕邊壓著一張《夜間住宿須知》，墨色很新。對床的棉被鼓起，像有人蓋著，卻沒有呼吸聲。",
+      "choices": [
+        {
+          "id": "read_rules",
+          "label": "讀完須知並收好",
+          "resultText": "你記下八條規則。熄燈廣播在窗外響起。",
+          "effects": [
+            {
+              "type": "sheet",
+              "value": "doc_official_dorm_guide"
+            },
+            {
+              "type": "flag",
+              "key": "readDormGuide",
+              "value": true
+            }
+          ]
+        },
+        {
+          "id": "check_bed",
+          "label": "掀開對床的棉被看看",
+          "resultText": "棉被下是疊好的舊衣，名牌被撕去。你背脊發涼。",
+          "effects": [
+            {
+              "type": "sheet",
+              "value": "doc_official_dorm_guide"
+            },
+            {
+              "type": "sanity",
+              "value": -15
+            },
+            {
+              "type": "anomaly",
+              "value": 2
+            }
+          ]
+        }
+      ],
+      "once": true
+    },
+    {
+      "id": "event_leave_dorm_night",
+      "title": "熄燈後的腳步",
+      "trigger": "熄燈廣播後玩家試圖離開 dorm_room",
+      "description": "走廊那端傳來規律的拖鞋聲，像在等你跟上。須知第一條說待在床位，可那聲音停在你門外，不走也不敲。",
+      "choices": [
+        {
+          "id": "stay_bed",
+          "label": "遵守規則，留在床上",
+          "resultText": "你閉眼裝睡。腳步聲在門外停了一整夜。",
+          "effects": [
+            {
+              "type": "flag",
+              "key": "stayedInBed",
+              "value": true
+            },
+            {
+              "type": "sanity",
+              "value": -10
+            }
+          ]
+        },
+        {
+          "id": "go_out",
+          "label": "開門查看走廊",
+          "resultText": "走廊空無一人。床鋪卻在你身後悄悄被人坐過。",
+          "effects": [
+            {
+              "type": "sheet",
+              "value": "doc_previous_student_note"
+            },
+            {
+              "type": "anomaly",
+              "value": 2
+            },
+            {
+              "type": "sanity",
+              "value": -15
+            },
+            {
+              "type": "location",
+              "value": "corridor"
+            }
+          ]
+        }
+      ],
+      "once": true
+    },
+    {
+      "id": "event_night_rollcall",
+      "title": "夜間點名",
+      "trigger": "凌晨舍監進入 dorm_room 點名",
+      "description": "手電筒光掃過每張床。舍監念著名字，聲音平板。輪到你時，他念的姓名只差一個字——卻又像在等你答「有」。",
+      "choices": [
+        {
+          "id": "answer_yes",
+          "label": "清楚答「有」",
+          "resultText": "你應聲。舍監在簿上劃去你，光熄了。",
+          "effects": [
+            {
+              "type": "flag",
+              "key": "answeredRollcall",
+              "value": true
+            },
+            {
+              "type": "anomaly",
+              "value": 2
+            }
+          ]
+        },
+        {
+          "id": "stay_silent",
+          "label": "屏息，不出聲",
+          "resultText": "他停頓良久，記下「缺席」，繼續往下一床。",
+          "effects": [
+            {
+              "type": "flag",
+              "key": "neverAnswered",
+              "value": true
+            },
+            {
+              "type": "sanity",
+              "value": -10
+            },
+            {
+              "type": "sheet",
+              "value": "doc_burnt_register_page"
+            }
+          ]
+        }
+      ],
+      "once": true
+    },
+    {
+      "id": "event_hallway_name_call",
+      "title": "走廊喊名",
+      "trigger": "非點名時段，玩家在 corridor 移動",
+      "description": "燈管嗡嗡作響。有人在轉角喊你全名，語氣熟得像同寢室友。第三條說別回應、繼續前行——但聲音越喊越近。",
+      "choices": [
+        {
+          "id": "reply",
+          "label": "回應一聲再走",
+          "resultText": "你才開口，名冊上便多了一筆，少了你。",
+          "effects": [
+            {
+              "type": "flag",
+              "key": "answeredRollcall",
+              "value": true
+            },
+            {
+              "type": "sanity",
+              "value": -15
+            },
+            {
+              "type": "anomaly",
+              "value": 2
+            }
+          ]
+        },
+        {
+          "id": "walk_on",
+          "label": "沉默，繼續前行",
+          "resultText": "你低頭快步。聲音停在你身後，沒再跟來。",
+          "effects": [
+            {
+              "type": "flag",
+              "key": "ignoredHallwayCall",
+              "value": true
+            },
+            {
+              "type": "sheet",
+              "value": "doc_previous_student_note"
+            },
+            {
+              "type": "sanity",
+              "value": -5
+            }
+          ]
+        }
+      ],
+      "once": true
+    }
+  ]
+}
