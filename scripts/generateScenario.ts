@@ -674,9 +674,10 @@ async function runEventEngineer(
 
   let eventsC = (await loadCheckpoint(scenarioSlug, "events_3c")) as EventsOutput | null;
   if (!eventsC) {
-    const contradictionStr = contract.contradictionEvents.map((c) => `- ${c.eventId}：${c.choiceConsequence}`).join("\n");
+    const contradictions = contract.contradictionEvents ?? [];
+    const contradictionStr = contradictions.map((c) => `- ${c.eventId}：${c.choiceConsequence}`).join("\n");
     const r = await callAgent(client, "Agent 3c 事件工程師（矛盾+清晨）", EVENT_SYSTEM_PROMPT,
-      `設計 ${ruleMapC.length + contract.contradictionEvents.length + 1} 個事件。場景：${concept.name}，地點：${locations}\n\n1. 合約規定事件：\n${ruleMapC.map((r) => `   - ${r.mustTriggerEventId}`).join("\n")}\n2. 矛盾規則事件：\n${contradictionStr}\n3. 清晨/離開條件（once: true）：\n${contract.endingPaths.map((e) => `   - 結局 ${e.endingId} 需要：${e.requiredEvents.join(", ")}`).join("\n")}\n\n${strictPrompt}\n\n輸出 JSON（\`\`\`json）：{ "events": [...] }`,
+      `設計 ${ruleMapC.length + contradictions.length + 1} 個事件。場景：${concept.name}，地點：${locations}\n\n1. 合約規定事件：\n${ruleMapC.map((r) => `   - ${r.mustTriggerEventId}`).join("\n")}\n2. 矛盾規則事件：\n${contradictionStr}\n3. 清晨/離開條件（once: true）：\n${contract.endingPaths.map((e) => `   - 結局 ${e.endingId} 需要：${e.requiredEvents.join(", ")}`).join("\n")}\n\n${strictPrompt}\n\n輸出 JSON（\`\`\`json）：{ "events": [...] }`,
       baseContext, 8000);
     eventsC = extractJSON<EventsOutput>(r);
     await saveCheckpoint(scenarioSlug, "events_3c", eventsC);
@@ -994,17 +995,22 @@ async function runValidator(
   }
 ): Promise<ValidationOutput> {
   // Only pass IDs and structure, not full text — keeps input small
+  // Use ?. and ?? [] to guard against model returning different structure keys
+  const r = allOutputs.rules;
+  const e = allOutputs.events;
+  const en = allOutputs.endings;
+  const c = allOutputs.contract;
   const summary = {
-    ruleNumbers: allOutputs.rules.mainRules.map((r) => r.number),
-    eventIds: allOutputs.events.events.map((e) => e.id),
-    endingIds: allOutputs.endings.endings.map((e) => e.id),
-    contractRuleEventMap: allOutputs.contract.ruleEventMap,
-    contractEndingPaths: allOutputs.contract.endingPaths.map((p) => ({
+    ruleNumbers: (r?.mainRules ?? []).map((x) => x.number),
+    eventIds: (e?.events ?? []).map((x) => x.id),
+    endingIds: (en?.endings ?? []).map((x) => x.id),
+    contractRuleEventMap: c?.ruleEventMap ?? [],
+    contractEndingPaths: (c?.endingPaths ?? []).map((p) => ({
       endingId: p.endingId,
-      requiredEvents: p.requiredEvents,
+      requiredEvents: p.requiredEvents ?? [],
     })),
-    contradictionEventIds: allOutputs.contract.contradictionEvents.map((c) => c.eventId),
-    docIds: allOutputs.rules.foundDocuments.map((d) => d.id),
+    contradictionEventIds: (c?.contradictionEvents ?? []).map((x) => x.eventId),
+    docIds: (r?.foundDocuments ?? []).map((x) => x.id),
   };
 
   const result = await callAgent(
