@@ -641,73 +641,47 @@ async function runEventEngineer(
   contract: DesignContract
 ): Promise<EventsOutput> {
   const locations = concept.locations.map((l) => l.id).join(", ");
-  const ruleMapStr = contract.ruleEventMap
-    .map((r) => `- ${r.mustTriggerEventId}（第${r.ruleNumber}條${r.isTrap ? "，陷阱" : ""}）`)
-    .join("\n");
-  const halfLen = Math.ceil(contract.ruleEventMap.length / 2);
-  const ruleMapA = contract.ruleEventMap.slice(0, halfLen);
-  const ruleMapB = contract.ruleEventMap.slice(halfLen);
+  // Split rule events into thirds to stay under token limit
+  const total = contract.ruleEventMap.length;
+  const third = Math.ceil(total / 3);
+  const ruleMapA = contract.ruleEventMap.slice(0, third);
+  const ruleMapB = contract.ruleEventMap.slice(third, third * 2);
+  const ruleMapC = contract.ruleEventMap.slice(third * 2);
 
-  const baseContext = `## 規則摘要\n${rules.mainRules.map((r) => `第${r.number}條：${r.text}`).join("\n")}\n\n## 設計合約\n${JSON.stringify(contract, null, 2)}`;
+  const baseContext = `## 規則摘要\n${rules.mainRules.map((r) => `第${r.number}條：${r.text}`).join("\n")}\n\n## 設計合約（ID 必須完全相符）\n${JSON.stringify(contract, null, 2)}`;
 
-  // Agent 3a: opening event + first half of rule-trigger events
-  const resultA = await callAgent(
-    client,
-    "Agent 3a 事件工程師（前半）",
-    EVENT_SYSTEM_PROMPT,
-    `
-設計以下事件（共 ${halfLen + 1} 個）：
+  const strictPrompt = `每個事件嚴格控制：description ≤ 60字，resultText ≤ 45字，只輸出必要欄位。\n${EFFECTS_REF}`;
 
-場景：${concept.name}，地點：${locations}
+  // Save sub-checkpoints so retry doesn't re-run completed parts
+  let eventsA = (await loadCheckpoint(finalSlug, "events_3a")) as EventsOutput | null;
+  if (!eventsA) {
+    const r = await callAgent(client, "Agent 3a 事件工程師（開場+前段）", EVENT_SYSTEM_PROMPT,
+      `設計 ${ruleMapA.length + 1} 個事件。場景：${concept.name}，地點：${locations}\n\n1. 開場事件（once: true）：玩家進入場景，收到規則說明\n2. 合約規定事件（ID 必須完全相同）：\n${ruleMapA.map((r) => `   - ${r.mustTriggerEventId}`).join("\n")}\n\n${strictPrompt}\n\n輸出 JSON（\`\`\`json）：{ "events": [...] }`,
+      baseContext, 8000);
+    eventsA = extractJSON<EventsOutput>(r);
+    await saveCheckpoint(finalSlug, "events_3a", eventsA);
+  }
 
-1. 開場事件（once: true）：玩家進入場景，收到規則說明
-2. 以下合約規定事件（必須用完全相同的 ID）：
-${ruleMapA.map((r) => `   - ${r.mustTriggerEventId}`).join("\n")}
+  let eventsB = (await loadCheckpoint(finalSlug, "events_3b")) as EventsOutput | null;
+  if (!eventsB) {
+    const r = await callAgent(client, "Agent 3b 事件工程師（中段）", EVENT_SYSTEM_PROMPT,
+      `設計 ${ruleMapB.length} 個事件。場景：${concept.name}，地點：${locations}\n\n合約規定事件（ID 必須完全相同）：\n${ruleMapB.map((r) => `   - ${r.mustTriggerEventId}`).join("\n")}\n\n${strictPrompt}\n\n輸出 JSON（\`\`\`json）：{ "events": [...] }`,
+      baseContext, 8000);
+    eventsB = extractJSON<EventsOutput>(r);
+    await saveCheckpoint(finalSlug, "events_3b", eventsB);
+  }
 
-每個事件 3-4 個選項。description ≤ 80字。resultText ≤ 60字。
-${EFFECTS_REF}
+  let eventsC = (await loadCheckpoint(finalSlug, "events_3c")) as EventsOutput | null;
+  if (!eventsC) {
+    const contradictionStr = contract.contradictionEvents.map((c) => `- ${c.eventId}：${c.choiceConsequence}`).join("\n");
+    const r = await callAgent(client, "Agent 3c 事件工程師（矛盾+清晨）", EVENT_SYSTEM_PROMPT,
+      `設計 ${ruleMapC.length + contract.contradictionEvents.length + 1} 個事件。場景：${concept.name}，地點：${locations}\n\n1. 合約規定事件：\n${ruleMapC.map((r) => `   - ${r.mustTriggerEventId}`).join("\n")}\n2. 矛盾規則事件：\n${contradictionStr}\n3. 清晨/離開條件（once: true）：\n${contract.endingPaths.map((e) => `   - 結局 ${e.endingId} 需要：${e.requiredEvents.join(", ")}`).join("\n")}\n\n${strictPrompt}\n\n輸出 JSON（\`\`\`json）：{ "events": [...] }`,
+      baseContext, 8000);
+    eventsC = extractJSON<EventsOutput>(r);
+    await saveCheckpoint(finalSlug, "events_3c", eventsC);
+  }
 
-輸出 JSON（\`\`\`json 包裹）：{ "events": [...] }
-`,
-    baseContext,
-    8000
-  );
-
-  // Agent 3b: second half of rules + contradiction events + morning
-  const contradictionStr = contract.contradictionEvents
-    .map((c) => `- ${c.eventId}：${c.choiceConsequence}`)
-    .join("\n");
-
-  const resultB = await callAgent(
-    client,
-    "Agent 3b 事件工程師（後半）",
-    EVENT_SYSTEM_PROMPT,
-    `
-設計以下事件（共 ${ruleMapB.length + contract.contradictionEvents.length + 1} 個）：
-
-場景：${concept.name}，地點：${locations}
-
-1. 以下合約規定事件（必須用完全相同的 ID）：
-${ruleMapB.map((r) => `   - ${r.mustTriggerEventId}`).join("\n")}
-
-2. 矛盾規則事件（讓玩家選擇相信哪份文件）：
-${contradictionStr}
-
-3. 清晨/離開條件事件（once: true，讓玩家達成各個結局）：
-${contract.endingPaths.map((e) => `   結局 ${e.endingId} 需要：${e.requiredEvents.join(", ")}`).join("\n")}
-
-每個事件 3-4 個選項。description ≤ 80字。resultText ≤ 60字。
-${EFFECTS_REF}
-
-輸出 JSON（\`\`\`json 包裹）：{ "events": [...] }
-`,
-    baseContext,
-    8000
-  );
-
-  const eventsA = extractJSON<EventsOutput>(resultA);
-  const eventsB = extractJSON<EventsOutput>(resultB);
-  return { events: [...eventsA.events, ...eventsB.events] };
+  return { events: [...eventsA.events, ...eventsB.events, ...eventsC.events] };
 }
 
 // ─── Agent 4: 對話作家 ───────────────────────────────────────────────────────

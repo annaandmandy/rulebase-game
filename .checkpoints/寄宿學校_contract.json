@@ -1,0 +1,183 @@
+{
+  "ruleEventMap": [
+    {
+      "ruleNumber": 1,
+      "mustTriggerEventId": "event_leave_dorm_night",
+      "exposedByDocId": "doc_previous_student_note",
+      "isTrap": true
+    },
+    {
+      "ruleNumber": 2,
+      "mustTriggerEventId": "event_night_rollcall",
+      "exposedByDocId": "doc_burnt_register_page",
+      "isTrap": true
+    },
+    {
+      "ruleNumber": 3,
+      "mustTriggerEventId": "event_hallway_name_call",
+      "exposedByDocId": "doc_previous_student_note",
+      "isTrap": false
+    },
+    {
+      "ruleNumber": 4,
+      "mustTriggerEventId": "event_attendance_board",
+      "exposedByDocId": "doc_staff_memo",
+      "isTrap": true
+    },
+    {
+      "ruleNumber": 5,
+      "mustTriggerEventId": "event_duty_office_register",
+      "exposedByDocId": "doc_staff_memo",
+      "isTrap": true
+    },
+    {
+      "ruleNumber": 6,
+      "mustTriggerEventId": "event_bathroom_mirror",
+      "exposedByDocId": "doc_staff_memo",
+      "isTrap": false
+    },
+    {
+      "ruleNumber": 7,
+      "mustTriggerEventId": "event_rooftop_door",
+      "exposedByDocId": "doc_burnt_register_page",
+      "isTrap": false
+    },
+    {
+      "ruleNumber": 8,
+      "mustTriggerEventId": "event_morning_bell",
+      "exposedByDocId": "doc_staff_memo",
+      "isTrap": true
+    }
+  ],
+  "endingPaths": [
+    {
+      "endingId": "ending_uncounted_survivor",
+      "title": "數不到的人",
+      "requiredFlags": [
+        "neverAnswered",
+        "neverRegistered"
+      ],
+      "requiredEvents": [
+        "event_night_rollcall",
+        "event_morning_bell"
+      ],
+      "blockedBy": [
+        "answeredRollcall",
+        "registeredAtOffice"
+      ]
+    },
+    {
+      "endingId": "ending_taken_by_rollcall",
+      "title": "答到的那一個",
+      "requiredFlags": [
+        "answeredRollcall"
+      ],
+      "requiredEvents": [
+        "event_night_rollcall"
+      ],
+      "blockedBy": []
+    },
+    {
+      "endingId": "ending_register_trap",
+      "title": "被移欄的姓名",
+      "requiredFlags": [
+        "registeredAtOffice",
+        "wardenLookedUp"
+      ],
+      "requiredEvents": [
+        "event_duty_office_register"
+      ],
+      "blockedBy": []
+    },
+    {
+      "endingId": "ending_board_補入",
+      "title": "牌上多出的一人",
+      "requiredFlags": [
+        "changedAttendanceBoard"
+      ],
+      "requiredEvents": [
+        "event_attendance_board"
+      ],
+      "blockedBy": []
+    },
+    {
+      "endingId": "ending_waiting_forever",
+      "title": "鈴不會響",
+      "requiredFlags": [
+        "stayedAndWaited"
+      ],
+      "requiredEvents": [
+        "event_morning_bell"
+      ],
+      "blockedBy": [
+        "neverAnswered"
+      ]
+    },
+    {
+      "endingId": "ending_seven_truth",
+      "title": "三十年前的七個",
+      "requiredFlags": [
+        "knewAllTruth"
+      ],
+      "requiredEvents": [
+        "event_rooftop_door",
+        "event_morning_bell"
+      ],
+      "blockedBy": [
+        "answeredRollcall",
+        "registeredAtOffice"
+      ]
+    }
+  ],
+  "contradictionEvents": [
+    {
+      "contradictionIndex": 0,
+      "eventId": "event_hallway_name_call",
+      "choiceConsequence": "答有→被點走；回應前行→被算缺額；沉默→安全"
+    },
+    {
+      "contradictionIndex": 1,
+      "eventId": "event_duty_office_register",
+      "choiceConsequence": "登記→舍監抬頭被選；離開→保住身分"
+    },
+    {
+      "contradictionIndex": 2,
+      "eventId": "event_attendance_board",
+      "choiceConsequence": "改數字→被登錄為多餘；不動→避開核對"
+    }
+  ],
+  "docUsageHints": [
+    {
+      "docId": "doc_official_dorm_guide",
+      "relevantDialogueTopics": [
+        "值班室求助",
+        "夜間點名",
+        "信任制度"
+      ]
+    },
+    {
+      "docId": "doc_previous_student_note",
+      "relevantDialogueTopics": [
+        "走廊喊名",
+        "不答有不答無",
+        "對床棉被"
+      ]
+    },
+    {
+      "docId": "doc_staff_memo",
+      "relevantDialogueTopics": [
+        "補足缺額",
+        "標準程序",
+        "夜讀生改數字"
+      ]
+    },
+    {
+      "docId": "doc_burnt_register_page",
+      "relevantDialogueTopics": [
+        "三十年前火災",
+        "七名缺額",
+        "答到走不出名冊"
+      ]
+    }
+  ]
+}

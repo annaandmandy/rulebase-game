@@ -1,0 +1,81 @@
+{
+  "name": "夜讀生點名簿",
+  "nameEn": "The Night Roll Call",
+  "slug": "night_roll_call",
+  "tagline": "熄燈後，宿舍的人數永遠要對得上——多一個，或少一個，都不行。",
+  "setting": "你是私立惠光中學的轉學生，今晚是住進北棟宿舍的第一夜。校方在你床頭留下一份《夜間住宿須知》與一支老舊手電筒。深夜十點四十三分，廣播響起最後一次熄燈提醒，走廊的腳步聲卻沒有停。",
+  "coreHorror": "這所寄宿學校用嚴格的「點名」與「人數核對」制度維持一種表面的秩序，但規則本身互相矛盾——有時要求你回應點名，有時要求你絕對沉默。真正的恐怖在於：宿舍裡的人數從一開始就不對，而你必須在天亮前確保自己仍被算在「活著的學生」那一欄。",
+  "hiddenTruth": "北棟宿舍在三十年前的一場火災中死了七名夜讀生，校方從未銷除他們的學籍。每晚的點名制度其實是為了「補足缺額」——當在校人數少於名冊登記人數時，制度會從現有住宿生中挑選一人，將其轉入死者那一欄以維持帳面平衡。所有規則的真正目的不是保護學生，而是確保『有人會被點走』。回應錯誤的點名、被叫到不存在的名字、或在核對時被算成多餘的人，都會讓你成為那個被補進缺額的學生。唯一的生路是讓自己『不被算進任何一次核對』——既不答有，也不答無。",
+  "atmosphere": [
+    "熄燈後的長廊",
+    "點名簿",
+    "制度性凝視",
+    "錯位人數",
+    "舊式廣播",
+    "沉默規訓"
+  ],
+  "startTime": 1303,
+  "locations": [
+    {
+      "id": "dorm_room",
+      "name": "寢室 307",
+      "description": "你的床位靠窗，對床的棉被疊得整齊，卻沒有登記室友的名字。床頭貼著《夜間住宿須知》。"
+    },
+    {
+      "id": "corridor",
+      "name": "三樓走廊",
+      "description": "細長的日光燈走廊，地面反著潮濕的光。熄燈後本應無人，卻偶有拖鞋摩擦地板的聲音。"
+    },
+    {
+      "id": "washroom",
+      "name": "盥洗間",
+      "description": "一整排水槽與鏡子，最末端那面鏡子蒙著霧氣，無論幾點都擦不乾淨。"
+    },
+    {
+      "id": "study_hall",
+      "name": "夜讀自習室",
+      "description": "排排座位仍亮著檯燈，桌上攤開的課本停在同一頁。牆上掛著當日的『出席人數』牌。"
+    },
+    {
+      "id": "stairwell",
+      "name": "西側樓梯間",
+      "description": "通往各樓層的舊樓梯，牆面有一塊被油漆草草蓋過的焦痕。夜裡這裡最冷。"
+    },
+    {
+      "id": "duty_office",
+      "name": "舍監值班室",
+      "description": "玻璃窗後亮著一盞檯燈，桌上攤著厚重的點名簿與一支紅筆。值班的人總是低著頭。"
+    },
+    {
+      "id": "roof_door",
+      "name": "頂樓鐵門",
+      "description": "走廊盡頭的鐵門，掛著『非緊急請勿開啟』的褪色告示。門縫透出夜風，與火災後封閉的傳聞有關。"
+    }
+  ],
+  "npcs": [
+    {
+      "id": "warden",
+      "name": "舍監 周老師",
+      "role": "夜間值班舍監，負責點名與人數核對，語氣公事公辦卻不曾真正抬頭看你",
+      "staffMode": "normal"
+    },
+    {
+      "id": "night_student",
+      "name": "戴口罩的夜讀生",
+      "role": "自稱也是轉學生的少年，熟知規則漏洞，但他的學號不在任何名冊上",
+      "staffMode": "false_helpful"
+    }
+  ],
+  "playerFlags": [
+    "answered_roll_call",
+    "stayed_silent_during_count",
+    "saw_extra_bed_occupied",
+    "name_called_from_corridor",
+    "checked_attendance_board",
+    "found_burnt_register",
+    "warden_looked_up",
+    "counted_as_surplus",
+    "talked_to_night_student",
+    "survived_until_dawn"
+  ]
+}

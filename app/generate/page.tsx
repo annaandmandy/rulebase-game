@@ -17,6 +17,12 @@ export default function GeneratePage() {
 
   const isRunning = generationJob?.running === true;
   const isDone = generationJob?.done === true;
+  const isFailed = isDone && generationJob?.success === false;
+
+  // Auto-clean stale registry entries on mount
+  useEffect(() => {
+    fetch("/api/generate-add").catch(() => {});
+  }, []);
 
   useEffect(() => {
     logEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -37,9 +43,7 @@ export default function GeneratePage() {
       });
 
       if (!res.ok || !res.body) {
-        setGenerationJob((prev) =>
-          prev ? { ...prev, running: false, done: true, success: false } : null
-        );
+        setGenerationJob({ theme: theme.trim(), slug, running: false, done: true, success: false, logs: ["❌ 連線失敗"] });
         return;
       }
 
@@ -60,33 +64,20 @@ export default function GeneratePage() {
             const data = JSON.parse(event.slice(6));
             if (data.type === "log") appendGenerationLog(data.message);
             if (data.type === "done") {
-              setGenerationJob((prev) =>
-                prev ? { ...prev, running: false, done: true, success: data.success } : null
-              );
+              setGenerationJob({ theme: theme.trim(), slug, running: false, done: true, success: data.success, logs: [] });
             }
             if (data.type === "error") {
               appendGenerationLog(`❌ ${data.message}`);
-              setGenerationJob((prev) =>
-                prev ? { ...prev, running: false, done: true, success: false } : null
-              );
+              setGenerationJob({ theme: theme.trim(), slug, running: false, done: true, success: false, logs: [] });
             }
           } catch { /* ignore */ }
         }
       }
     } catch (err) {
       appendGenerationLog(`❌ ${String(err)}`);
-      setGenerationJob((prev) =>
-        prev ? { ...prev, running: false, done: true, success: false } : null
-      );
+      setGenerationJob({ theme: theme.trim(), slug, running: false, done: true, success: false, logs: [] });
     }
   }
-
-  // Allow updating state from outside (use functional update)
-  const setGenerationJobFn = (fn: (prev: typeof generationJob) => typeof generationJob) => {
-    setGenerationJob(fn(generationJob));
-  };
-  // Provide functional update to the generate handler
-  void setGenerationJobFn;
 
   async function handleAddToGame() {
     if (!generationJob?.slug) return;
@@ -170,6 +161,16 @@ export default function GeneratePage() {
               className="px-4 py-2.5 text-sm border border-green-900 text-green-600 hover:border-green-700 hover:text-green-400 transition-colors disabled:opacity-30"
             >
               {addStatus === "adding" ? "加入中…" : "✓ 加入遊戲"}
+            </button>
+          )}
+
+          {isFailed && (
+            <button
+              onClick={handleGenerate}
+              disabled={!theme.trim() || !apiKey.trim()}
+              className="px-4 py-2.5 text-sm border border-amber-900 text-amber-700 hover:border-amber-700 hover:text-amber-500 transition-colors disabled:opacity-30"
+            >
+              ↺ 從上次失敗點繼續
             </button>
           )}
 

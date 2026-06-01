@@ -1,9 +1,20 @@
 import { join } from "path";
 import { postProcess } from "@/lib/generator/postProcess";
-import { addScenarioToRegistry, getScenarioExportName } from "@/lib/generator/addToRegistry";
+import { addScenarioToRegistry, getScenarioExportName, cleanRegistry } from "@/lib/generator/addToRegistry";
 import { readFile } from "fs/promises";
 
 export const runtime = "nodejs";
+
+// GET: clean stale registry entries
+export async function GET() {
+  const projectRoot = process.cwd();
+  try {
+    const removed = await cleanRegistry(projectRoot);
+    return Response.json({ ok: true, removed });
+  } catch (err: unknown) {
+    return Response.json({ ok: false, error: (err as Error).message }, { status: 500 });
+  }
+}
 
 export async function POST(request: Request) {
   const { slug } = await request.json() as { slug: string };
@@ -14,6 +25,9 @@ export async function POST(request: Request) {
   const outDir = join(projectRoot, "lib", "scenarios", slug);
 
   try {
+    // First, clean stale registry entries (scenarios deleted from disk)
+    await cleanRegistry(projectRoot);
+
     // Run post-processing
     const ppResult = await postProcess(outDir, projectRoot);
 
