@@ -26,6 +26,15 @@ export type PlayerState = {
   ateEggs: boolean;
   sawDuplicateGuest: boolean;
   hasReadExtraRule: boolean;
+  // found documents
+  foundSheets: string[];
+  // new event flags
+  phoneAnswered: boolean;
+  heardName: boolean;
+  wardrobeOpened: boolean;
+  foundPreviousNote: boolean;
+  talkedToChild: boolean;
+  eggVerificationDone: boolean;
   discoveredClues: string[];
   endingsUnlocked: string[];
   logs: GameLog[];
@@ -51,7 +60,8 @@ export type Effect = {
     | "clue"
     | "world"
     | "ending"
-    | "anomaly";
+    | "anomaly"
+    | "sheet";
   key?: string;
   value?: number | boolean | string;
 };

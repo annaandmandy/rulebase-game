@@ -163,6 +163,18 @@ export const LOCATIONS: Record<LocationId, LocationData> = {
           { type: "anomaly", value: 2 },
         ],
       },
+      {
+        id: "corridor_wall_sticker",
+        label: "查看走廊牆上的告示",
+        condition: (player) => !player.foundSheets.includes("corridor_warning"),
+        resultText: "你發現牆上有一張撕下來的貼紙，邊緣參差不齊，還有一點膠帶的痕跡。貼紙上的字是用黑色麥克筆寫的，非常工整，但內容很奇怪。你把它撕下來放進口袋。",
+        effects: [
+          { type: "time", value: 8 },
+          { type: "sheet", value: "corridor_warning" },
+          { type: "clue", value: "走廊牆上有人貼了一張警告" },
+          { type: "anomaly", value: 1 },
+        ],
+      },
     ],
   },
 
@@ -240,6 +252,48 @@ export const LOCATIONS: Record<LocationId, LocationData> = {
           return "你試著躺下休息，但沒有辦法睡著。走廊裡有聲音，遠遠的，聽不清楚是什麼。你躺了一會兒，決定還是起來。";
         },
         effects: [{ type: "time", value: 30 }, { type: "sanity", value: 5 }],
+      },
+      {
+        id: "room304_desk_drawer",
+        label: "拉開書桌抽屜",
+        condition: (player) => !player.foundSheets.includes("room304_addendum"),
+        resultText: "抽屜裡疊著幾份紙。最上面是一份整齊的文件，標題是「304 號房附加說明」。你把它拿起來。六條，每一條都讓你覺得有點不對，但你說不清楚哪裡不對。",
+        effects: [
+          { type: "time", value: 10 },
+          { type: "sheet", value: "room304_addendum" },
+          { type: "clue", value: "在書桌抽屜找到 304 號房附加說明" },
+          { type: "anomaly", value: 1 },
+        ],
+      },
+      {
+        id: "room304_under_mattress",
+        label: "掀開床墊，查看床底",
+        condition: (player) => !player.foundPreviousNote,
+        resultText: "你把床墊的一角掀開。在床墊和床板之間，有一張對折的紙，紙已經有些發黃。\n\n你把它拿出來，展開，看了一遍。\n\n字跡是圓珠筆，有些地方寫得很急，有些地方寫得非常工整，像是在強迫自己保持冷靜。",
+        effects: [
+          { type: "time", value: 15 },
+          { type: "flag", key: "foundPreviousNote", value: true },
+          { type: "sheet", value: "previous_guest_note" },
+          { type: "clue", value: "床墊下有前任住客（303）留下的紙條" },
+          { type: "sanity", value: -15 },
+          { type: "anomaly", value: 2 },
+          { type: "world", key: "hotelRealityStability", value: -8 },
+        ],
+      },
+      {
+        id: "room304_bathroom_mirror",
+        label: "進浴室照鏡子",
+        resultText: (player, world) => {
+          if (world.anomalyAttention >= 3) {
+            return "你走進浴室，站在鏡子前。你的倒影是正常的，但有一個細節不對：你的倒影稍微慢了一拍。不是很明顯，大約慢了零點五秒。你舉起右手，倒影舉起左手——這是正常的——但它舉起來的速度比你慢了半秒。\n\n你把燈關掉，回到房間。";
+          }
+          return "你走進浴室，站在鏡子前面看了看自己。你看起來比你想的要疲憊。你在這裡站了一會兒，沒有特別的理由，然後走回房間。";
+        },
+        effects: [
+          { type: "time", value: 10 },
+          { type: "sanity", value: -8 },
+          { type: "anomaly", value: 1 },
+        ],
       },
     ],
   },
@@ -448,6 +502,26 @@ export const LOCATIONS: Record<LocationId, LocationData> = {
           return "員工的名牌是黑色的，上面有他的名字和「正式員工」的字樣。名牌的邊角有一點磨損，好像戴了很久。";
         },
         effects: [{ type: "time", value: 5 }, { type: "clue", value: "員工名牌顏色可能隨狀態改變" }],
+      },
+      {
+        id: "desk_counter_papers",
+        label: "趁員工低頭時，瞄一眼櫃台上的文件",
+        condition: (player, world) =>
+          !player.foundSheets.includes("staff_memo") &&
+          world.staffMode !== "hostile",
+        resultText: (player, world) => {
+          if (world.staffMode === "watching") {
+            return "你試著偷看，但員工立刻把文件扣過去，用手壓住。他看著你說：「有需要嗎？」你說沒有。他繼續看著你，直到你離開。";
+          }
+          return "你在員工低頭的時候，偷偷瞄了一眼。你看見一份表格，最上面寫著「員工備忘錄」。你快速掃了幾行。第 17 條，第 22 條，第 23 條。你沒有時間看更多，但那幾條讓你很不舒服。你把你記住的抄下來。";
+        },
+        effects: [
+          { type: "time", value: 12 },
+          { type: "sheet", value: "staff_memo" },
+          { type: "clue", value: "看見員工備忘錄——凌晨後的值班人員不是正式員工" },
+          { type: "suspicion", value: 15 },
+          { type: "anomaly", value: 1 },
+        ],
       },
     ],
   },

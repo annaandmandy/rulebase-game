@@ -37,6 +37,13 @@ const INITIAL_PLAYER: PlayerState = {
   ateEggs: false,
   sawDuplicateGuest: false,
   hasReadExtraRule: false,
+  foundSheets: [],
+  phoneAnswered: false,
+  heardName: false,
+  wardrobeOpened: false,
+  foundPreviousNote: false,
+  talkedToChild: false,
+  eggVerificationDone: false,
   discoveredClues: [],
   endingsUnlocked: [],
   logs: [{ time: "21:43", text: "你抵達山霧旅館。" }],
@@ -91,6 +98,11 @@ function applyEffect(
     case "clue":
       if (!p.discoveredClues.includes(effect.value as string)) {
         p.discoveredClues = [...p.discoveredClues, effect.value as string];
+      }
+      break;
+    case "sheet":
+      if (!p.foundSheets.includes(effect.value as string)) {
+        p.foundSheets = [...p.foundSheets, effect.value as string];
       }
       break;
     case "world":
